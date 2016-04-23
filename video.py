@@ -16,7 +16,7 @@ time.sleep(0.1)
 
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     image = frame.array
-    
+
     # Visualize
     cv2.imshow("Frame", image)
 
@@ -30,5 +30,5 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 camera.capture(rawCapture, format="bgr")
 image = rawCapture.array
 
-cv2.imshow("Image", image)
+cv2.imshow("Image", gray)
 cv2.waitKey(0)
