@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 # External module imports
 import RPi.GPIO as GPIO
 import time
@@ -31,7 +33,47 @@ class Motor:
         GPIO.output(self.B, GPIO.LOW)
         self.mode = "brake"
 
+class Robot:
+    def __init__(self):
+        self.frontLeft = None
+        self.frontRight = None
+        self.rearLeft = None
+        self.rearRight = None
+
+    def forward(self, t=5):
+        print "MOVING FORWARD"
+        self.frontLeft.ccw()
+        self.frontRight.cw()
+        self.rearLeft.ccw()
+        self.rearRight.cw()
+        time.sleep(t)
+
+    def turnLeft(self, t=5):
+        print "TURNING LEFT"
+        self.frontLeft.cw()
+        self.frontRight.cw()
+        self.rearLeft.cw()
+        self.rearRight.cw()
+        time.sleep(t)
+
+    def turnRight(self, t=5):
+        print "TURNING RIGHT"
+        self.frontLeft.ccw()
+        self.frontRight.ccw()
+        self.rearLeft.ccw()
+        self.rearRight.ccw()
+        time.sleep(t)
+    
+    def stop(self, t=1):
+        print "STOPPING"
+        self.frontLeft.brake()
+        self.frontRight.brake()
+        self.rearLeft.brake()
+        self.rearRight.brake()
+   
+
 ### SETUP
+
 GPIO.setmode(GPIO.BCM) # Broadcom pin-numbering scheme
 
 # PWM setup
@@ -48,27 +90,37 @@ m2 = Motor(20, 21)
 m3 = Motor(13, 19)
 m4 = Motor(22, 27)
 
+robot = Robot()
+robot.frontLeft = m2
+robot.frontRight = m1
+robot.rearLeft = m4
+robot.rearRight = m3    
+
+### MAIN FUNCTION
 print("Here we go! Press CTRL+C to exit")
 try:
     while 1:
-        m1.ccw()
-        m2.ccw()
-        m3.ccw()
-        m4.ccw()
-        time.sleep(5)
-        m1.cw()
-        m2.cw()
-        m3.cw()
-        m4.cw()
-        time.sleep(5)
-        #pwm.stop()
-        m1.brake()
-        m2.brake()
-        m3.brake()
-        m4.brake()
-        #pwm.start(dc)
-        time.sleep(5)
-        #pwm.ChangeDutyCycle(dc)
+        robot.forward()
+        robot.stop(5)
+        robot.turnLeft()
+        robot.stop(5)
+        robot.turnRight()
+        
+        #m1.ccw()
+        #m2.ccw()
+        #m3.ccw()
+        #m4.ccw()
+        #time.sleep(5)
+        #m1.cw()
+        #m2.cw()
+        #m3.cw()
+        #m4.cw()
+        #time.sleep(5)
+        #m1.brake()
+        #m2.brake()
+        #m3.brake()
+        #m4.brake()
+        #time.sleep(5)
 
 # If CTRL+C is pressed, exit cleanly:
 except KeyboardInterrupt: 
