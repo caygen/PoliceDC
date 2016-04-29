@@ -22,10 +22,10 @@ lower = np.array([110, 50, 50])
 upper = np.array([130, 255, 255])
 
 # white
-w_lower = np.array([250, 250, 250])
-w_upper = np.array([255, 255, 255])
+w_lower = np.array([0, 0, 250])
+w_upper = np.array([0, 0, 255])
 
-for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+#for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     # Grab frame
     image = frame.array
     

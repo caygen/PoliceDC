@@ -17,25 +17,48 @@ time.sleep(0.1)
 
 # Set color filter
 
-# blue
-lower = np.array([110, 50, 50])
-upper = np.array([130, 255, 255])
+# blue - bgr 
+#lower = np.array([110, 50, 50])
+#upper = np.array([130, 255, 255])
 
 # white
-w_lower = np.array([250, 250, 250])
-w_upper = np.array([255, 255, 255])
+lower = np.array([0, 0, 200])
+upper = np.array([180, 255, 255])
+
+#red
+#lower = np.array([121, 0, 200])
+#upper = np.array([180, 255, 255])
+
+def tunerCb(x):
+    global lower
+    lower[0] = cv2.getTrackbarPos('Hlow', 'hsv')
+    lower[1] = cv2.getTrackbarPos('Slow', 'hsv')
+    lower[2] = cv2.getTrackbarPos('Vlow', 'hsv')
+    upper[0] = cv2.getTrackbarPos('Hhi', 'hsv')
+    upper[1] = cv2.getTrackbarPos('Shi', 'hsv')
+    upper[2] = cv2.getTrackbarPos('Vhi', 'hsv')
+    return
+
+cv2.namedWindow('hsv', cv2.WINDOW_NORMAL)
+cv2.namedWindow('Frame', cv2.WINDOW_NORMAL)
+cv2.createTrackbar('Hlow', 'hsv', lower[0], 180, tunerCb)
+cv2.createTrackbar('Slow', 'hsv', lower[1], 255, tunerCb)
+cv2.createTrackbar('Vlow', 'hsv', lower[2], 255, tunerCb)
+cv2.createTrackbar('Hhi', 'hsv', upper[0], 180, tunerCb)
+cv2.createTrackbar('Shi', 'hsv', upper[1], 255, tunerCb)
+cv2.createTrackbar('Vhi', 'hsv', upper[2], 255, tunerCb)
 
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     # Grab frame
     image = frame.array
+    image = cv2.resize(image, (100, int(image.shape[0]*100/image.shape[1])), interpolation = cv2.INTER_AREA)
     
     # Get HSV image
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     
     # Filter by HSV color & blur mask
     mask = cv2.inRange(hsv, lower, upper)
-    mask = cv2.GaussianBlur(mask, (21, 21), 0)
-
+    #mask = cv2.GaussianBlur(mask, (21, 21), 0)
     _, contours, _ = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
     print "Found", len(contours), "contours"
     
@@ -50,10 +73,13 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     
     # Visualize
     cv2.imshow("Frame", image)
+    cv2.imshow("hsv", mask)
 
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
+        print image
         break
 
     # Cleanup
     rawCapture.truncate(0)
+
