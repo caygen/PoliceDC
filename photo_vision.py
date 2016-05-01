@@ -25,7 +25,11 @@ upper = np.array([130, 255, 255])
 w_lower = np.array([0, 0, 250])
 w_upper = np.array([0, 0, 255])
 
-#for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+# red
+r_lower = np.array([124, 0, 204])
+r_upper = np.array([180, 255, 255])
+
+for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     # Grab frame
     image = frame.array
     
@@ -33,7 +37,7 @@ w_upper = np.array([0, 0, 255])
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     
     # Filter by HSV color & blur mask
-    mask = cv2.inRange(hsv, lower, upper)
+    mask = cv2.inRange(hsv, r_lower, r_upper)
     mask = cv2.GaussianBlur(mask, (21, 21), 0)
 
     _, contours, _ = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
@@ -45,7 +49,8 @@ w_upper = np.array([0, 0, 255])
         moments = cv2.moments(contours[i])
         coord = (int(moments['m10']/max(moments['m00'], 1)), int(moments['m01']/max(moments['m00'], 1)))
         centers.append(coord)
-        cv2.circle(image, centers[-1], 3, (255, 0, 0), -1)
+	if (coord[0] > 5 and coord[1] > 5):
+            cv2.circle(image, centers[-1], 3, (255, 0, 0), -1)
         print "Center at", coord
     
     # Visualize

@@ -3,7 +3,7 @@
 # External module imports
 import RPi.GPIO as GPIO
 import time
-
+from PoliceLibrary import *
 
 ### FUNCTIONS
 class Motor:
@@ -21,12 +21,12 @@ class Motor:
     def cw(self):
         GPIO.output(self.A, GPIO.HIGH)
         GPIO.output(self.B, GPIO.LOW)
-        self.mode = "cw"
+        self.mode = "cw - high, low"
 
     def ccw(self):
         GPIO.output(self.A, GPIO.HIGH)
         GPIO.output(self.B, GPIO.HIGH)
-        self.mode = "ccw"
+        self.mode = "ccw - high, high"
 
     def brake(self):
         GPIO.output(self.A, GPIO.LOW)
@@ -91,36 +91,41 @@ m3 = Motor(13, 19)
 m4 = Motor(22, 27)
 
 robot = Robot()
-robot.frontLeft = m2
-robot.frontRight = m1
-robot.rearLeft = m4
-robot.rearRight = m3    
+robot.frontLeft = m1
+robot.frontRight = m2
+robot.rearLeft = m3
+robot.rearRight = m4    
+
+# Timer
+TIMEOUT = 120
+startTime = time.time()
 
 ### MAIN FUNCTION
 print("Here we go! Press CTRL+C to exit")
 try:
     while 1:
-        robot.forward()
-        robot.stop(5)
-        robot.turnLeft()
-        robot.stop(5)
-        robot.turnRight()
-        
-        #m1.ccw()
-        #m2.ccw()
-        #m3.ccw()
-        #m4.ccw()
-        #time.sleep(5)
-        #m1.cw()
-        #m2.cw()
-        #m3.cw()
-        #m4.cw()
-        #time.sleep(5)
-        #m1.brake()
-        #m2.brake()
-        #m3.brake()
-        #m4.brake()
-        #time.sleep(5)
+	robot.frontLeft.cw()
+	robot.frontRight.cw()
+	robot.rearLeft.cw()
+	robot.rearRight.cw()
+	time.sleep(5)
+#FR, FL = reverse; RR, RL = normal # cw is faster
+	#robot.rearLeft.ccw()
+	#print robot.rearRight.mode
+	#time.sleep(5)
+        #robot.forward()
+        #robot.stop(5)
+        #robot.turnLeft()
+        #robot.stop(5)
+        #robot.turnRight()
+        runTime = 0 #time.time()-startTime
+	if (runTime > TIMEOUT):
+	    print "timeout:",runTime 
+            robot.stop()
+            pwm.stop() # stop PWM
+            PIO.cleanup() # cleanup all GPIO
+            break
+
 
 # If CTRL+C is pressed, exit cleanly:
 except KeyboardInterrupt: 

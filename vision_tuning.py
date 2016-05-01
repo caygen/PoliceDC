@@ -22,12 +22,16 @@ time.sleep(0.1)
 #upper = np.array([130, 255, 255])
 
 # white
-lower = np.array([0, 0, 200])
-upper = np.array([180, 255, 255])
+#lower = np.array([0, 0, 200])
+#upper = np.array([180, 255, 255])
 
 #red
 #lower = np.array([121, 0, 200])
 #upper = np.array([180, 255, 255])
+
+# red bright
+lower = np.array([124, 0, 204])
+upper = np.array([180, 255, 255])
 
 def tunerCb(x):
     global lower
@@ -68,8 +72,9 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         moments = cv2.moments(contours[i])
         coord = (int(moments['m10']/max(moments['m00'], 1)), int(moments['m01']/max(moments['m00'], 1)))
         centers.append(coord)
-        cv2.circle(image, centers[-1], 3, (255, 0, 0), -1)
-        print "Center at", coord
+        if (coord[0] is not 0 and coord[1] is not 0):
+	    cv2.circle(image, centers[-1], 3, (255, 0, 0), -1)
+            print "Center at", coord
     
     # Visualize
     cv2.imshow("Frame", image)
