@@ -3,14 +3,19 @@
 # External module imports
 import RPi.GPIO as GPIO
 import time
+import wiringpi
 from PoliceLibrary import *
 
 ### FUNCTIONS
 class Motor:
-    def __init__(self, A, B):
+    def __init__(self, A, B, pwmPin, duty=95, range=25):
         self.A = A
         self.B = B
         self.mode = "brake"
+	self.duty = duty
+	self.val = int(duty/100.0*range)
+	self.range = range
+	self.softPWM = pwmPin
         GPIO.setup(A, GPIO.OUT)
         GPIO.setup(B, GPIO.OUT)
         self.brake()
@@ -18,20 +23,25 @@ class Motor:
     def __str__(self):
         return "Pin A: " + str(self.A) + ", Pin B: " + str(self.B) + ", Mode: " + self.mode
 
-    def cw(self):
-        GPIO.output(self.A, GPIO.HIGH)
-        GPIO.output(self.B, GPIO.LOW)
-        self.mode = "cw - high, low"
-
     def ccw(self):
         GPIO.output(self.A, GPIO.HIGH)
+        GPIO.output(self.B, GPIO.LOW)
+        self.mode = "ccw"
+
+    def cw(self):
+        GPIO.output(self.A, GPIO.HIGH)
         GPIO.output(self.B, GPIO.HIGH)
-        self.mode = "ccw - high, high"
+        self.mode = "cw"
 
     def brake(self):
         GPIO.output(self.A, GPIO.LOW)
         GPIO.output(self.B, GPIO.LOW)
         self.mode = "brake"
+    
+    def set_speed(self, duty):
+	self.duty = duty
+	self.val = int(duty/100.0*self.range)
+	wiringpi.softPwmWrite(self.softPWM, self.val)
 
 class Robot:
     def __init__(self):
@@ -70,33 +80,49 @@ class Robot:
         self.frontRight.brake()
         self.rearLeft.brake()
         self.rearRight.brake()
-   
 
 ### SETUP
 
-GPIO.setmode(GPIO.BCM) # Broadcom pin-numbering scheme
-
-# PWM setup
-pwmPin = 18 # Broadcom pin 18 (P1 pin 12)
+## Constants
 dc = 95 # duty cycle (0-100) for PWM pin
 freq = 20000
+range = 25
+
+GPIO.setmode(GPIO.BCM) # Broadcom pin-numbering scheme
+
+## Motor pins
+
+robot = Robot()
+
+# frontLeft: A = gray, B = blue, PWM = green
+robot.frontLeft = Motor(A=23, B=24, pwmPin=25, duty=50, range=range)
+
+# frontRight: A = black, B = yellow, PWM = white
+robot.frontRight = Motor(A=20, B=21, pwmPin=16, duty=50, range=range)
+
+# rearLeft: A = white, B = gray, PWM = purple
+robot.rearLeft = Motor(A=13, B=19, pwmPin=26, duty=50, range=range)
+
+# rearRight: A = purple, B = blue, PWM = green
+robot.rearRight = Motor(A=22, B=27, pwmPin=17, duty=50, range=range)
+
+## PWM setup
+
+# Hardware PWM
+pwmPin = 18 # Broadcom pin 18 (P1 pin 12)
 GPIO.setup(pwmPin, GPIO.OUT) # PWM pin set as output
 pwm = GPIO.PWM(pwmPin, freq)  # Initialize PWM
 pwm.start(dc) # Initial state
 
-# Motor pins
-m1 = Motor(23, 24)
-m2 = Motor(20, 21)
-m3 = Motor(13, 19)
-m4 = Motor(22, 27)
+# Software PWM
+wiringpi.wiringPiSetupGpio()
+wiringpi.softPwmCreate(m1.softPWM, m1.val, m1.range)
+print m1.val
+wiringpi.softPwmCreate(m2.softPWM, m2.val, m2.range)
+wiringpi.softPwmCreate(m3.softPWM, m3.val, m3.range)
+wiringpi.softPwmCreate(m4.softPWM, m4.val, m4.range)
 
-robot = Robot()
-robot.frontLeft = m1
-robot.frontRight = m2
-robot.rearLeft = m3
-robot.rearRight = m4    
-
-# Timer
+## Timer
 TIMEOUT = 120
 startTime = time.time()
 
