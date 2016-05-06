@@ -30,7 +30,7 @@ time.sleep(0.1)
 #upper = np.array([180, 255, 255])
 
 # red bright
-lower = np.array([124, 0, 204])
+lower = np.array([124, 0, 210])
 upper = np.array([180, 255, 255])
 
 def tunerCb(x):
@@ -62,14 +62,24 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     
     # Filter by HSV color & blur mask
     mask = cv2.inRange(hsv, lower, upper)
-    #mask = cv2.GaussianBlur(mask, (21, 21), 0)
+    mask = cv2.GaussianBlur(mask, (21, 21), 0)
     _, contours, _ = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
     print "Found", len(contours), "contours"
     
     # Find centers of blobs and draw blue circle
     centers = []
+    
+    index = -1
+    maxArea = 0
     for i in range(len(contours)):
-        moments = cv2.moments(contours[i])
+	area = cv2.contourArea(contours[i])
+        if area > maxArea:
+            index = i
+            maxArea = area
+    if index > -1:
+    #for i in range(0, min(len(contours),5)): # only draw top 5
+        cv2.drawContours(image, [contours[index]], 0, (0, 255, 0))
+        moments = cv2.moments(contours[index])
         coord = (int(moments['m10']/max(moments['m00'], 1)), int(moments['m01']/max(moments['m00'], 1)))
         centers.append(coord)
         if (coord[0] is not 0 and coord[1] is not 0):

@@ -23,25 +23,30 @@ class Motor:
     def __str__(self):
         return "Pin A: " + str(self.A) + ", Pin B: " + str(self.B) + ", Mode: " + self.mode
 
-    def ccw(self):
-        GPIO.output(self.A, GPIO.HIGH)
-        GPIO.output(self.B, GPIO.LOW)
-        self.mode = "ccw"
-
     def cw(self):
+	self.set_speed(self.duty)
         GPIO.output(self.A, GPIO.HIGH)
-        GPIO.output(self.B, GPIO.HIGH)
+	GPIO.output(self.B, GPIO.LOW)
         self.mode = "cw"
 
+    def ccw(self):
+	self.set_speed(self.duty)
+	GPIO.output(self.A, GPIO.HIGH)
+        GPIO.output(self.B, GPIO.HIGH)
+        self.mode = "ccw"
+
     def brake(self):
-        GPIO.output(self.A, GPIO.LOW)
+	self.set_speed(0)
+	GPIO.output(self.A, GPIO.HIGH)
         GPIO.output(self.B, GPIO.LOW)
         self.mode = "brake"
     
-    def set_speed(self, duty):
-	self.duty = duty
-	self.val = int(duty/100.0*self.range)
+    def set_speed(self, speed):
+	self.val = int(speed/100.0*self.range)
 	wiringpi.softPwmWrite(self.softPWM, self.val)
+
+    def set_duty(self, duty):
+        self.duty = duty
 
 class Robot:
     def __init__(self):
@@ -81,6 +86,12 @@ class Robot:
         self.rearLeft.brake()
         self.rearRight.brake()
 
+    def setSpeeds(self, speed):
+        self.frontLeft.set_duty(speed)
+        self.frontRight.set_duty(speed)
+        self.rearLeft.set_duty(speed)
+        self.rearRight.set_duty(speed)
+
 ### SETUP
 
 ## Constants
@@ -94,17 +105,18 @@ GPIO.setmode(GPIO.BCM) # Broadcom pin-numbering scheme
 
 robot = Robot()
 
+# A = PWM mode, B = direction, pwmPin = A input
 # frontLeft: A = gray, B = blue, PWM = green
-robot.frontLeft = Motor(A=23, B=24, pwmPin=25, duty=50, range=range)
+robot.frontLeft = Motor(A=25, B=24, pwmPin=23, duty=10, range=range)
 
 # frontRight: A = black, B = yellow, PWM = white
-robot.frontRight = Motor(A=20, B=21, pwmPin=16, duty=50, range=range)
+robot.frontRight = Motor(A=16, B=21, pwmPin=20, duty=10, range=range)
 
 # rearLeft: A = white, B = gray, PWM = purple
-robot.rearLeft = Motor(A=13, B=19, pwmPin=26, duty=50, range=range)
+robot.rearLeft = Motor(A=26, B=19, pwmPin=13, duty=10, range=range)
 
 # rearRight: A = purple, B = blue, PWM = green
-robot.rearRight = Motor(A=22, B=27, pwmPin=17, duty=50, range=range)
+robot.rearRight = Motor(A=17, B=27, pwmPin=22, duty=10, range=range)
 
 ## PWM setup
 
@@ -116,11 +128,10 @@ pwm.start(dc) # Initial state
 
 # Software PWM
 wiringpi.wiringPiSetupGpio()
-wiringpi.softPwmCreate(m1.softPWM, m1.val, m1.range)
-print m1.val
-wiringpi.softPwmCreate(m2.softPWM, m2.val, m2.range)
-wiringpi.softPwmCreate(m3.softPWM, m3.val, m3.range)
-wiringpi.softPwmCreate(m4.softPWM, m4.val, m4.range)
+wiringpi.softPwmCreate(robot.rearLeft.softPWM, robot.rearLeft.val, robot.rearLeft.range)
+wiringpi.softPwmCreate(robot.rearRight.softPWM, robot.rearRight.val, robot.rearRight.range)
+wiringpi.softPwmCreate(robot.frontLeft.softPWM, robot.frontLeft.val, robot.frontLeft.range)
+wiringpi.softPwmCreate(robot.frontRight.softPWM, robot.frontRight.val, robot.frontRight.range)
 
 ## Timer
 TIMEOUT = 120
@@ -130,11 +141,11 @@ startTime = time.time()
 print("Here we go! Press CTRL+C to exit")
 try:
     while 1:
-	robot.frontLeft.cw()
-	robot.frontRight.cw()
-	robot.rearLeft.cw()
-	robot.rearRight.cw()
-	time.sleep(5)
+        robot.setSpeeds(30)
+        #robot.forward()
+        #time.sleep(5)
+        robot.turnLeft(2)
+        robot.turnRight(2)
 #FR, FL = reverse; RR, RL = normal # cw is faster
 	#robot.rearLeft.ccw()
 	#print robot.rearRight.mode
@@ -155,6 +166,7 @@ try:
 
 # If CTRL+C is pressed, exit cleanly:
 except KeyboardInterrupt: 
+    robot.stop()
     pwm.stop() # stop PWM
     GPIO.cleanup() # cleanup all GPIO
 
