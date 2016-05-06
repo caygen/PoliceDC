@@ -55,7 +55,15 @@ class Robot:
         self.rearLeft = None
         self.rearRight = None
 
-    def forward(self, t=5):
+    def backward(self, t=2):
+        print "MOVING BACKWARD"
+        self.frontLeft.cw()
+        self.frontRight.ccw()
+        self.rearLeft.cw()
+        self.rearRight.ccw()
+        time.sleep(t)
+
+    def forward(self, t=2):
         print "MOVING FORWARD"
         self.frontLeft.ccw()
         self.frontRight.cw()
@@ -63,7 +71,7 @@ class Robot:
         self.rearRight.cw()
         time.sleep(t)
 
-    def turnLeft(self, t=5):
+    def turnLeft(self, t=2):
         print "TURNING LEFT"
         self.frontLeft.cw()
         self.frontRight.cw()
@@ -71,7 +79,7 @@ class Robot:
         self.rearRight.cw()
         time.sleep(t)
 
-    def turnRight(self, t=5):
+    def turnRight(self, t=2):
         print "TURNING RIGHT"
         self.frontLeft.ccw()
         self.frontRight.ccw()
@@ -85,6 +93,7 @@ class Robot:
         self.frontRight.brake()
         self.rearLeft.brake()
         self.rearRight.brake()
+        time.sleep(t)
 
     def setSpeeds(self, speed):
         self.frontLeft.set_duty(speed)
@@ -142,10 +151,10 @@ print("Here we go! Press CTRL+C to exit")
 try:
     while 1:
         robot.setSpeeds(30)
-        #robot.forward()
-        #time.sleep(5)
-        robot.turnLeft(2)
-        robot.turnRight(2)
+        robot.forward(1)
+        robot.turnLeft(1)
+        robot.turnRight(1)
+        robot.backward(1)
 #FR, FL = reverse; RR, RL = normal # cw is faster
 	#robot.rearLeft.ccw()
 	#print robot.rearRight.mode
