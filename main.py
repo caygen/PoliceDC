@@ -5,6 +5,11 @@ import RPi.GPIO as GPIO
 import time
 import wiringpi
 from PoliceLibrary import *
+from picamera.array import PiRGBArray
+from picamer import PiCamera
+import cv2
+import numpy as np
+import thread
 
 ### FUNCTIONS
 class Motor:
@@ -127,8 +132,6 @@ robot.rearLeft = Motor(A=26, B=19, pwmPin=13, duty=10, range=range)
 # rearRight: A = purple, B = blue, PWM = green
 robot.rearRight = Motor(A=17, B=27, pwmPin=22, duty=10, range=range)
 
-## PWM setup
-
 # Hardware PWM
 pwmPin = 18 # Broadcom pin 18 (P1 pin 12)
 GPIO.setup(pwmPin, GPIO.OUT) # PWM pin set as output
@@ -146,8 +149,70 @@ wiringpi.softPwmCreate(robot.frontRight.softPWM, robot.frontRight.val, robot.fro
 TIMEOUT = 120
 startTime = time.time()
 
+
+
+class CameraThread (threading.Thread):
+    def __init__(self, threadID, name):
+    	threading.Thread.__init__(self)
+    	## Camera
+        self.camera = PiCamera()
+        self.camera.resolution = (640, 480)
+        camera.framerate = 32
+        self.rawCapture = PiRGBArray(camera, size=(640, 480))
+
+        # Camera warmup
+        time.sleep(0.1)
+
+    def run(self):
+        for frame in self.camera.capture_continuous(self.rawCapture, format="bgr"for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+            # Grab frame
+    	    image = frame.array
+    	    image = cv2.resize(image, (100, int(image.shape[0]*100/image.shape[1])), interpolation = cv2.INTER_AREA)
+    	    # Get HSV image
+    	    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    	    # Filter by HSV color & blur mask
+    	    mask = cv2.inRange(hsv, lower, upper)
+    	    _, contours, _ = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
+    	    print "Found", len(contours), "contours"
+    
+            # Find centers of blobs and draw blue circle
+    	    centers = []
+    
+	    index = -1
+    	    maxArea = 0
+    	    for i in range(len(contours)):
+	        area = cv2.contourArea(contours[i])
+                if area > maxArea:
+                    index = i
+                    maxArea = area
+    	    if index > -1:
+            #for i in range(0, min(len(contours),5)): # only draw top 5
+                cv2.drawContours(image, [contours[index]], 0, (0, 255, 0))
+                moments = cv2.moments(contours[index])
+                coord = (int(moments['m10']/max(moments['m00'], 1)), int(moments['m01']/max(moments['m00'], 1)))
+                centers.append(coord)
+                if (coord[0] is not 0 and coord[1] is not 0):
+	             cv2.circle(image, centers[-1], 3, (255, 0, 0), -1)
+                     print "Center at", coord
+    
+            # Visualize
+            cv2.imshow("Frame", image)
+            cv2.imshow("hsv", hsv)
+            cv2.imshow("hsvMask", mask)    
+    
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord("q"):
+                print image
+                break
+
+            # Cleanup
+            rawCapture.truncate(0)
+    
 ### MAIN FUNCTION
 print("Here we go! Press CTRL+C to exit")
+thread = CameraThread()
+thread.start()
 try:
     while 1:
         robot.setSpeeds(30)
