@@ -32,6 +32,8 @@ time.sleep(0.1)
 # red bright
 lower = np.array([124, 0, 210])
 upper = np.array([180, 255, 255])
+Blow = 210
+Bhi = 255
 
 def tunerCb(x):
     global lower
@@ -41,6 +43,8 @@ def tunerCb(x):
     upper[0] = cv2.getTrackbarPos('Hhi', 'hsv')
     upper[1] = cv2.getTrackbarPos('Shi', 'hsv')
     upper[2] = cv2.getTrackbarPos('Vhi', 'hsv')
+    Bhi = cv2.getTrackbarPos('Bhi', 'hsv')
+    Blow = cv2.getTrackbarPos('Blow', 'hsv')
     return
 
 cv2.namedWindow('hsv', cv2.WINDOW_NORMAL)
@@ -51,6 +55,8 @@ cv2.createTrackbar('Vlow', 'hsv', lower[2], 255, tunerCb)
 cv2.createTrackbar('Hhi', 'hsv', upper[0], 180, tunerCb)
 cv2.createTrackbar('Shi', 'hsv', upper[1], 255, tunerCb)
 cv2.createTrackbar('Vhi', 'hsv', upper[2], 255, tunerCb)
+cv2.createTrackbar('Blow', 'hsv', Blow, 255, tunerCb)
+cv2.createTrackbar('Bhi', 'hsv', Bhi, 255, tunerCb)
 
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     # Grab frame
@@ -59,10 +65,15 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     
     # Get HSV image
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    # Get Gray image
+    #gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    #_ , grayMask = cv2.threshold(gray, Blow , Bhi, cv2.THRESH_BINARY)
+
+    #res = cv2.bitwise_and(hsv, hsv, grayMask)
     
     # Filter by HSV color & blur mask
+    #hsv = cv2.GaussianBlur(hsv, (21, 21), 0)
     mask = cv2.inRange(hsv, lower, upper)
-    mask = cv2.GaussianBlur(mask, (21, 21), 0)
     _, contours, _ = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
     print "Found", len(contours), "contours"
     
@@ -88,8 +99,9 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     
     # Visualize
     cv2.imshow("Frame", image)
-    cv2.imshow("hsv", mask)
-
+    cv2.imshow("hsv", hsv)
+    cv2.imshow("hsvMask", mask)    
+    
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
         print image
