@@ -6,10 +6,10 @@ import time
 import wiringpi
 from PoliceLibrary import *
 from picamera.array import PiRGBArray
-from picamer import PiCamera
+from picamera import PiCamera
 import cv2
 import numpy as np
-import thread
+import threading
 
 ### FUNCTIONS
 class Motor:
@@ -111,7 +111,7 @@ class Robot:
 ## Constants
 dc = 95 # duty cycle (0-100) for PWM pin
 freq = 20000
-range = 25
+pwm_range = 25
 
 GPIO.setmode(GPIO.BCM) # Broadcom pin-numbering scheme
 
@@ -121,16 +121,16 @@ robot = Robot()
 
 # A = PWM mode, B = direction, pwmPin = A input
 # frontLeft: A = gray, B = blue, PWM = green
-robot.frontLeft = Motor(A=25, B=24, pwmPin=23, duty=10, range=range)
+robot.frontLeft = Motor(A=25, B=24, pwmPin=23, duty=10, range=pwm_range)
 
 # frontRight: A = black, B = yellow, PWM = white
-robot.frontRight = Motor(A=16, B=21, pwmPin=20, duty=10, range=range)
+robot.frontRight = Motor(A=16, B=21, pwmPin=20, duty=10, range=pwm_range)
 
 # rearLeft: A = white, B = gray, PWM = purple
-robot.rearLeft = Motor(A=26, B=19, pwmPin=13, duty=10, range=range)
+robot.rearLeft = Motor(A=26, B=19, pwmPin=13, duty=10, range=pwm_range)
 
 # rearRight: A = purple, B = blue, PWM = green
-robot.rearRight = Motor(A=17, B=27, pwmPin=22, duty=10, range=range)
+robot.rearRight = Motor(A=17, B=27, pwmPin=22, duty=10, range=pwm_range)
 
 # Hardware PWM
 pwmPin = 18 # Broadcom pin 18 (P1 pin 12)
@@ -149,77 +149,114 @@ wiringpi.softPwmCreate(robot.frontRight.softPWM, robot.frontRight.val, robot.fro
 TIMEOUT = 120
 startTime = time.time()
 
-
+hasTarget = False
+target = 0
 
 class CameraThread (threading.Thread):
-    def __init__(self, threadID, name):
+    def __init__(self):
     	threading.Thread.__init__(self)
-    	## Camera
+        ## Camera
         self.camera = PiCamera()
         self.camera.resolution = (640, 480)
-        camera.framerate = 32
-        self.rawCapture = PiRGBArray(camera, size=(640, 480))
+        self.camera.framerate = 32
+        self.rawCapture = PiRGBArray(self.camera, size=(640, 480))
 
         # Camera warmup
         time.sleep(0.1)
-
+        
     def run(self):
-        for frame in self.camera.capture_continuous(self.rawCapture, format="bgr"for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+        global target
+
+        #print "Camera thread is running"
+        red_lower = np.array([124, 0, 210])
+        red_upper = np.array([180, 255, 255])
+        blue_lower = np.array([110, 50, 54])
+        blue_upper = np.array([130, 255, 255])
+        Blow = 210
+        Bhi = 255
+        for frame in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
             # Grab frame
-    	    image = frame.array
+    	    image = cv2.flip(frame.array,0)
     	    image = cv2.resize(image, (100, int(image.shape[0]*100/image.shape[1])), interpolation = cv2.INTER_AREA)
     	    # Get HSV image
     	    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     
-    	    # Filter by HSV color & blur mask
-    	    mask = cv2.inRange(hsv, lower, upper)
-    	    _, contours, _ = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
-    	    print "Found", len(contours), "contours"
-    
+    	    # Filter by HSV color
+    	    mask_red = cv2.inRange(hsv, red_lower, red_upper)
+            mask_blue = cv2.inRange(hsv, blue_lower, blue_upper)
+    	    
+            _, contours_blue, _ = cv2.findContours(mask_blue, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
+            _, contours, _ = cv2.findContours(mask_red, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
+    	    #print "Found", len(contours), "red contours"
+            #print "Found", len(contours_blue), "blue contours"
+            
             # Find centers of blobs and draw blue circle
-    	    centers = []
-    
-	    index = -1
+            index = -1
     	    maxArea = 0
     	    for i in range(len(contours)):
 	        area = cv2.contourArea(contours[i])
                 if area > maxArea:
                     index = i
                     maxArea = area
-    	    if index > -1:
+            red_found = False
+            blue_found = False
+    	    coord = (0, 0)
+            coord_blue = (0, 0)
+            if index > -1:
             #for i in range(0, min(len(contours),5)): # only draw top 5
-                cv2.drawContours(image, [contours[index]], 0, (0, 255, 0))
+                cv2.drawContours(image, [contours[index]], 0, (0, 0, 255))
                 moments = cv2.moments(contours[index])
                 coord = (int(moments['m10']/max(moments['m00'], 1)), int(moments['m01']/max(moments['m00'], 1)))
-                centers.append(coord)
+                #centers.append(coord)
                 if (coord[0] is not 0 and coord[1] is not 0):
-	             cv2.circle(image, centers[-1], 3, (255, 0, 0), -1)
-                     print "Center at", coord
-    
+	             cv2.circle(image, coord, 3, (0, 0, 255), -1)
+                     print "Red center at", coord
+                     #height, width = image.shape[:2]
+                     #target = width/2 - coord[0]
+                     red_found = True
+            if len(contours_blue) > 0:
+               cv2.drawContours(image, [contours_blue[0]], 0, (255, 0, 0))
+               moments = cv2.moments(contours_blue[0])
+               coord_blue = (int(moments['m10']/max(moments['m00'], 1)), int(moments['m01']/max(moments['m00'], 1)))
+               if (coord_blue[0] is not 0 and coord[1] is not 0):
+                     cv2.circle(image, coord_blue, 3, (255, 0, 0), -1)
+                     #print "Blue center at", coord_blue
+                     blue_found = True
+            if blue_found and red_found:
+               if (abs(coord[0]-coord_blue[0]) < 10):
+                   height, width = image.shape[:2]
+                   target = width/2 - (coord[0]+coord_blue[0])/2
+                   print "target", target
+                   hasTarget = true
+            else:
+               hasTarget = false
             # Visualize
-            cv2.imshow("Frame", image)
-            cv2.imshow("hsv", hsv)
-            cv2.imshow("hsvMask", mask)    
+            cv2.imshow("Red", image)    
     
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
-                print image
+                #print image
                 break
 
             # Cleanup
-            rawCapture.truncate(0)
+            self.rawCapture.truncate(0)
     
 ### MAIN FUNCTION
 print("Here we go! Press CTRL+C to exit")
 thread = CameraThread()
+thread.daemon = True
 thread.start()
 try:
     while 1:
-        robot.setSpeeds(30)
-        robot.forward(1)
-        robot.turnLeft(1)
-        robot.turnRight(1)
-        robot.backward(1)
+        robot.setSpeeds(90)
+        robot.forward()
+        if hasTarget and target < 10 and target > -10:
+            robot.stop()
+        elif hasTarget and target > 10:
+            #robot.setSpeeds(30)
+            robot.turnRight(1)
+        elif hasTarget and target < -10:
+            robot.turnLeft(1)
 #FR, FL = reverse; RR, RL = normal # cw is faster
 	#robot.rearLeft.ccw()
 	#print robot.rearRight.mode

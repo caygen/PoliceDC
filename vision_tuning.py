@@ -60,7 +60,7 @@ cv2.createTrackbar('Bhi', 'hsv', Bhi, 255, tunerCb)
 
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     # Grab frame
-    image = frame.array
+    image = cv2.flip(frame.array,0)
     image = cv2.resize(image, (100, int(image.shape[0]*100/image.shape[1])), interpolation = cv2.INTER_AREA)
     
     # Get HSV image
