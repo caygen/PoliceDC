@@ -64,10 +64,10 @@ robot.rearRight = Motor(A=17, B=27, pwmPin=22, duty=10, range=pwm_range)
 ########################
 
 # Hardware PWM - not using
-#pwmPin = 18 # Broadcom pin 18 (P1 pin 12)
-#GPIO.setup(pwmPin, GPIO.OUT) # PWM pin set as output
-#pwm = GPIO.PWM(pwmPin, freq)  # Initialize PWM
-#pwm.start(dc) # Initial state
+pwmPin = 18 # Broadcom pin 18 (P1 pin 12)
+GPIO.setup(pwmPin, GPIO.OUT) # PWM pin set as output
+pwm = GPIO.PWM(pwmPin, 100)  # Initialize PWM
+pwm.start(dc) # Initial state
 
 ########################
 
@@ -132,10 +132,13 @@ class ShooterThread (threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.servo = Servo()
+        self.servo.update(30)
 
     def run(self):
-        if shootNow:
-            self.servo.shoot()
+        print "shooting thread works"
+        while not ALLSTOP:
+            if 1:
+                self.servo.shoot()
             
 ########################
 
@@ -254,6 +257,26 @@ class BlueFilterThread (threading.Thread):
         print "Blue thread is running"
         while not ALLSTOP:
             hasTarget_blue, coords_blue, targetPos_blue, image_blue = ColorFilter(image, hsv, self.lower, self.upper, (255,0,0))
+
+########################
+
+class Servo:
+
+    def __init__(self, angle=30):
+        self.angle = angle
+
+    def shoot(self):
+        self.update(180)
+	#print "shot(s) fired"
+        time.sleep(0.12)
+        self.update(30)
+        #print "reload"
+        time.sleep(0.1)
+
+    def update(self, angle):
+        global pwm
+        duty = float(angle) / 10.0 + 2.5
+        pwm.ChangeDutyCycle(duty)
           
 ################################################################################
 
@@ -269,9 +292,7 @@ shooterThread.start()
 
 try:
     while 1:
-        
-        robot.setAllSpeeds(90)
-        robot.forward()
+        robot.setAllSpeeds(30)
         
         if target.there and target.where < center_range and target.where > -center_range:
             robot.forward()

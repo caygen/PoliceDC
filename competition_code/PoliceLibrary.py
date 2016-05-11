@@ -168,7 +168,7 @@ class Robot:
         return self.action
 
     def backward(self, t=0.5):
-        #print "MOVING BACKWARD"
+        print "MOVING BACKWARD"
         self.action = "backward"
         self.frontLeft.cw()
         self.frontRight.ccw()
@@ -177,7 +177,7 @@ class Robot:
         time.sleep(t)
 
     def forward(self, t=0.5):
-        #print "MOVING FORWARD"
+        print "MOVING FORWARD"
         self.action = "forward"
         self.frontLeft.ccw()
         self.frontRight.cw()
@@ -186,7 +186,7 @@ class Robot:
         time.sleep(t)
 
     def turnLeft(self, t=0.5):
-        #print "TURNING LEFT"
+        print "TURNING LEFT"
         self.action = "left"
         self.frontLeft.cw()
         self.frontRight.cw()
@@ -195,7 +195,7 @@ class Robot:
         time.sleep(t)
 
     def turnRight(self, t=0.5):
-        #print "TURNING RIGHT"
+        print "TURNING RIGHT"
         self.action = "right"
         self.frontLeft.ccw()
         self.frontRight.ccw()
@@ -204,7 +204,7 @@ class Robot:
         time.sleep(t)
     
     def stop(self, t=0.5):
-        #print "STOPPING"
+        print "STOPPING"
         self.action = "stop"
         self.frontLeft.brake()
         self.frontRight.brake()
@@ -223,22 +223,3 @@ class Robot:
         self.frontRight.set_duty(fr)
         self.rearLeft.set_duty(rl)
         self.rearRight.set_duty(rr)
-
-########################
-
-class Servo:
-
-    def __init__(self, angle=30):
-        self.angle = angle
-
-    def shoot(self):
-        self.update(180)
-	#print "shot(s) fired"
-        time.sleep(0.12)
-        self.update(30)
-        #print "reload"
-        time.sleep(0.1)
-
-    def update(self, angle):
-        duty = float(angle) / 10.0 + 2.5
-        pwm.ChangeDutyCycle(duty)
