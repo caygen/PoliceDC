@@ -10,11 +10,15 @@ import numpy as np
 camera = PiCamera()
 camera.resolution = (640, 480)
 camera.framerate = 32
-camera.exposure
+camera.image_effect = 'blur'
+camera.vflip = True
+camera.video_stabilization = True
+camera.iso = 1600
 rawCapture = PiRGBArray(camera, size=(640, 480))
 
 # Camera warmup
-time.sleep(0.1)
+time.sleep(1)
+camera.exposure_mode = 'off'
 
 # Set color filter
 
@@ -59,12 +63,11 @@ cv2.createTrackbar('Vhi', 'hsv', upper[2], 255, tunerCb)
 cv2.createTrackbar('Blow', 'hsv', Blow, 255, tunerCb)
 cv2.createTrackbar('Bhi', 'hsv', Bhi, 255, tunerCb)
 
-cv2.
 
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     # Grab frame
-    image = cv2.flip(frame.array,0)
-    image = cv2.resize(image, (100, int(image.shape[0]*100/image.shape[1])), interpolation = cv2.INTER_AREA)
+    image = frame.array
+    image = cv2.resize(image, (200, int(image.shape[0]*200/image.shape[1])), interpolation = cv2.INTER_AREA)
     
     # Get HSV image
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -77,7 +80,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     # Filter by HSV color
     mask = cv2.inRange(hsv, lower, upper)
     _, contours, _ = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
-    print "Found", len(contours), "contours"
+    #print "Found", len(contours), "contours"
     
     # Find centers of blobs and draw blue circle
     centers = []
@@ -110,3 +113,4 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         break
 
     # Cleanup
+    rawCapture.truncate(0)
