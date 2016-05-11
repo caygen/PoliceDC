@@ -44,7 +44,7 @@ def ColorFilter2(image, hsv, lowerList, upperList, color):
     totalMask = np.ones((height, width), np.uint8)
     # Filter by HSV color
     for i in range(len(lowerList)):
-        mask = cv2.inRange(hsv, lowerList[i], upperList[i])
+        mask = cv2.inRange(hsv, lowerList[1], upperList[1])
         mask = cv2.dilate(mask, np.ones((11, 11)))
         res = cv2.bitwise_and(totalMask, mask, totalMask)
         cv2.imshow("mask"+str(i),mask)
@@ -223,3 +223,22 @@ class Robot:
         self.frontRight.set_duty(fr)
         self.rearLeft.set_duty(rl)
         self.rearRight.set_duty(rr)
+
+########################
+
+class Servo:
+
+    def __init__(self, angle=30):
+        self.angle = angle
+
+    def shoot(self):
+        self.update(180)
+	#print "shot(s) fired"
+        time.sleep(0.12)
+        self.update(30)
+        #print "reload"
+        time.sleep(0.1)
+
+    def update(self, angle):
+        duty = float(angle) / 10.0 + 2.5
+        pwm.ChangeDutyCycle(duty)
