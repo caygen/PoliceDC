@@ -21,6 +21,7 @@ red_upper = np.array([180, 255, 255])
 blue_lower = np.array([110, 50, 54])
 blue_upper = np.array([130, 255, 255])
 targetErr = 2
+center_range = 20
 
 ########################
 ## Globals Variables
@@ -125,6 +126,19 @@ cv2.createTrackbar('b_Vhi', 'mask1', blue_upper[2], 255, tunerCb_blue)
 
 ########################
 
+## Shooter Process
+
+class ShooterThread (threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.servo = Servo()
+
+    def run(self):
+        if shootNow:
+            self.servo.shoot()
+            
+########################
+
 ## Camera Processes
 
 class CameraThread (threading.Thread):
@@ -134,19 +148,13 @@ class CameraThread (threading.Thread):
         self.camera = PiCamera()
         self.camera.resolution = (640, 480)
         self.camera.framerate = 32
-        self.camera.exposure_compensation
         self.rawCapture = PiRGBArray(self.camera, size=(640, 480))
-        
+        self.camera.vflip = True
+        self.camera.hflip = True
         # Camera warmup
         time.sleep(0.1)
+        self.camera.exposure_mode = 'off'
 
-        # Init red & blue threads
-        #redThread = RedFilterThread(red_lower, red_upper, "red")
-        #redThread.daemon = True
-        #redThread.start()
-        #blueThread = BlueFilterThread(blue_lower, blue_upper, "blue")
-        #blueThread.daemon = True
-        #blueThread.start()
         
     def run(self):
         global ALLSTOP
@@ -165,7 +173,7 @@ class CameraThread (threading.Thread):
         for frame in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
             # Grab frame
             #image = cv2.flip(frame.array,0)
-    	    big = cv2.flip(frame.array,0)
+    	    big = frame.array
     	    image = cv2.resize(big, (200, int(big.shape[0]*200/big.shape[1])), interpolation = cv2.INTER_AREA)
 
     	    # Get HSV image
@@ -174,7 +182,10 @@ class CameraThread (threading.Thread):
             #hasTarget_red, coords_red, targetPos_red = ColorFilter(image, hsv, red_lower, red_upper, (0,0,255), targetErr)
             #hasTarget_blue, coords_blue, targetPos_blue = ColorFilter(image, hsv, blue_lower, blue_upper, (255,0,0), targetErr)
 
-            print "Target at",set(targetPosList)
+            targetPosList = list(set(targetPosList))
+            #print "Target",target.there,"at",targetPosList
+            if len(targetPosList) > 0:
+                 target.where = targetPosList[0]
             # Cleanup
             self.rawCapture.truncate(0)
 
@@ -248,20 +259,34 @@ class BlueFilterThread (threading.Thread):
 
 ### MAIN FUNCTION
 print("Here we go! Press CTRL+C to exit")
-thread = CameraThread()
-thread.daemon = True
-thread.start()
+cameraThread = CameraThread()
+cameraThread.daemon = True
+cameraThread.start()
+
+shooterThread = ShooterThread()
+shooterThread.daemon = True
+shooterThread.start()
+
 try:
     while 1:
         
         robot.setAllSpeeds(90)
         robot.forward()
-        if target.there and target.where < 10 and target.where > -10:
-            robot.stop()
-        elif target.there and target.where > 10:
+        
+        if target.there and target.where < center_range and target.where > -center_range:
+            robot.forward()
+            shootNow = True
+            print "I see you"
+        elif target.there and target.where < center_range:
             robot.turnRight()
-        elif target.there and target.where < -10:
+            shootNow = False
+            print "Pursuing right",target.where
+        elif target.there and target.where > -center_range:
             robot.turnLeft()
+            shootNow = False
+            print "Pursuing left",target.where
+        else:
+            shootNow = False
 
         runTime = 0 #time.time()-startTime
 	if (runTime > TIMEOUT):
