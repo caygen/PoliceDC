@@ -10,6 +10,7 @@ import numpy as np
 camera = PiCamera()
 camera.resolution = (640, 480)
 camera.framerate = 32
+camera.exposure
 rawCapture = PiRGBArray(camera, size=(640, 480))
 
 # Camera warmup
@@ -18,8 +19,8 @@ time.sleep(0.1)
 # Set color filter
 
 # blue - bgr 
-#lower = np.array([110, 50, 50])
-#upper = np.array([130, 255, 255])
+lower = np.array([110, 50, 50])
+upper = np.array([130, 255, 255])
 
 # white
 #lower = np.array([0, 0, 200])
@@ -58,6 +59,8 @@ cv2.createTrackbar('Vhi', 'hsv', upper[2], 255, tunerCb)
 cv2.createTrackbar('Blow', 'hsv', Blow, 255, tunerCb)
 cv2.createTrackbar('Bhi', 'hsv', Bhi, 255, tunerCb)
 
+cv2.
+
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     # Grab frame
     image = cv2.flip(frame.array,0)
@@ -71,8 +74,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
 
     #res = cv2.bitwise_and(hsv, hsv, grayMask)
     
-    # Filter by HSV color & blur mask
-    #hsv = cv2.GaussianBlur(hsv, (21, 21), 0)
+    # Filter by HSV color
     mask = cv2.inRange(hsv, lower, upper)
     _, contours, _ = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
     print "Found", len(contours), "contours"
@@ -108,5 +110,3 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         break
 
     # Cleanup
-    rawCapture.truncate(0)
-

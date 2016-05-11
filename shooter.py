@@ -29,4 +29,4 @@ s = Servo(90)
 s.update(90)
 while 1:
     s.shoot()
-    time.sleep(2)
+    time.sleep(1)
