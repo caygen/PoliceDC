@@ -16,42 +16,78 @@ def t_sleep(t):
 ####################
 
 def ColorFilter(image, hsv, lower, upper, color, err):
+    """ masks hsv image by hsv color range & draws contours on original image """
     if image is None or hsv is None:
         return False, [], [], image
     height, width = image.shape[:2]
 
     # Filter by HSV color
     mask = cv2.inRange(hsv, lower, upper)
-    mask = cv2.dilate(mask, np.ones((11, 11)))
-    inv_mask = cv2.bitwise_not(mask)
+    mask = cv2.dilate(mask, np.ones((11, 11)))    inv_mask = cv2.bitwise_not(mask)
     maskImg = np.zeros((height,width,3), np.uint8)
     res = cv2.bitwise_and(image,image,maskImg,mask=mask)
     cv2.imshow("mask"+str(color[0]),maskImg)
     cv2.waitKey(1)
     
-    _, contours, _ = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
-            
+    found, coords, targets = findContours(image, mask, err)
+
+    return found, coords, targets
+
+########################################
+
+def ColorFilter2(image, hsv, lowerList, upperList, color, err):
+    """ ColorFilter for multiple range lists """
+    if image is None or hsv is None:
+        return False, [], [], image
+    height, width = image.shape[:2]
+
+    totalMask = np.ones((height, width), np.uint8)
+    # Filter by HSV color
+    for i in range(len(lowerList)):
+        mask = cv2.inRange(hsv, lower[i], upper[i])
+        mask = cv2.dilate(mask, np.ones((11, 11)))
+        res = cv2.bitwise_and(mask, totalMask)
+
+    maskImg = np.zeros((height,width,3), np.uint8)
+    res = cv2.bitwise_and(image,image,maskImg,mask=totalMask)
+    cv2.imshow("mask"+str(color[0]),maskImg)
+    cv2.waitKey(1)
+
+    found, coords, targets = findContours(image, totalMask)
+
+    return found, coords, targets
+
+########################################
+
+def findContours(image, mask, n=3, err=None):
+    """ find n contours in mask and draw on image """
+    
+    height, width = image.shape[:2]
+
+    # Find contours
+    _, contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)
+    
     # Find centers of blobs and draw blue circle
     index = -1
     maxArea = 0
-    #for i in range(len(contours)):
-	#  area = cv2.contourArea(contours[i])
-         # if area > maxArea:
-          #    index = i
-           #   maxArea = area
             
     found = False
     coords = []
     targets = []
-    for i in range(0, min(len(contours),3)): # only draw top n
+
+    # Draw first n contours
+    for i in range(0, min(len(contours),n)):
         cv2.drawContours(image, [contours[index]], 0, color)
         moments = cv2.moments(contours[index])
         coord = (int(moments['m10']/max(moments['m00'], 1)), int(moments['m01']/max(moments['m00'], 1)))
         if (coord[0] is not 0 and coord[1] is not 0):
-	    cv2.circle(image, coord, 3, color, -1)
+        cv2.circle(image, coord, 3, color, -1)
             coords += [coord]
             exact = int(width/2 - coord[0])
-            targets += [x+exact for x in range(-err, err+1)]
+            if err is None:
+                targets += [exact]
+            else:
+                targets += [x+exact for x in range(-err, err+1)] # exact +/- err
             found = True
 
     return found, coords, targets
