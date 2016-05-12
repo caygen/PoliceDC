@@ -79,8 +79,15 @@ def findContours(image, mask, color, n=3, err=None):
     coords = []
     targets = []
 
+    for i in range(len(contours)):
+	area = cv2.contourArea(contours[i])
+        if area > maxArea:
+            index = i
+            maxArea = area
+
     # Draw first n contours
-    for i in range(0, min(len(contours),n)):
+    #for i in range(0, min(len(contours),n)):
+    if index > -1:
         cv2.drawContours(image, [contours[index]], 0, color)
         moments = cv2.moments(contours[index])
         coord = (int(moments['m10']/max(moments['m00'], 1)), int(moments['m01']/max(moments['m00'], 1)))

@@ -110,17 +110,19 @@ def ColorFilter2(image, hsv, lowerList, upperList, color):
 
     totalMask = np.ones((height, width), np.uint8)
     # Filter by HSV color
+    mask = []
     for i in range(len(lowerList)):
-        mask = cv2.inRange(hsv, lowerList[1], upperList[1])
+        mask = cv2.inRange(hsv, lowerList[i], upperList[i])
         mask = cv2.dilate(mask, np.ones((11, 11)))
         res = cv2.bitwise_and(totalMask, mask, totalMask)
         
         ### CALIBRATION ###
         cv2.imshow("mask"+str(i),mask)
-        cv2.waitKey(1)
-
+    
+    cv2.waitKey(1)
     maskImg = np.zeros((height,width,3), np.uint8)
     res = cv2.bitwise_and(image,image,maskImg,mask=totalMask)
+    cv2.imshow("total", maskImg)
  
     found, coords, targets = findContours(image, totalMask, color)
     
@@ -144,8 +146,15 @@ def findContours(image, mask, color, n=3, err=None):
     coords = []
     targets = []
 
+    for i in range(len(contours)):
+	area = cv2.contourArea(contours[i])
+        if area > maxArea:
+            index = i
+            maxArea = area
+
     # Draw first n contours
-    for i in range(0, min(len(contours),n)):
+    #for i in range(0, min(len(contours),n)):
+    if index > -1:
         cv2.drawContours(image, [contours[index]], 0, color)
         moments = cv2.moments(contours[index])
         coord = (int(moments['m10']/max(moments['m00'], 1)), int(moments['m01']/max(moments['m00'], 1)))
@@ -210,7 +219,6 @@ class CameraThread (threading.Thread):
         cv2.namedWindow("image", cv2.WINDOW_NORMAL)
         cv2.namedWindow("mask0", cv2.WINDOW_NORMAL)
         cv2.namedWindow("mask1", cv2.WINDOW_NORMAL)
-        cv2.namedWindow("hsv", cv2.WINDOW_NORMAL)
         cv2.setMouseCallback("image", mouseCb)
         
         for frame in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
@@ -228,7 +236,7 @@ class CameraThread (threading.Thread):
             s = hsv[cor_y, cor_x]
             #print "H:",s[0],"S:",s[1],"V:",s[2]
             cv2.putText(image,"H: "+str(s[0])+" S: "+str(s[1])+" V: "+str(s[2]),(cor_x,cor_y), cv2.FONT_HERSHEY_SIMPLEX, 0.2, 255)
-    	    
+    	    cv2.circle(image,(cor_x,cor_y),5,(255,0,0))
             target.there, coords, targetPosList, image = ColorFilter2(image, hsv, [red_lower, blue_lower], [red_upper, blue_upper], (0,255,0))
             
             targetPosList = list(set(targetPosList))
@@ -241,7 +249,6 @@ class CameraThread (threading.Thread):
                  break
 
             cv2.imshow("image", image)
-            cv2.imshow("hsv", hsv)
             cv2.waitKey(1)
 
 cameraThread = CameraThread()
