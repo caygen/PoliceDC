@@ -1,0 +1,14 @@
+#!/usr/bin/python
+from time import sleep
+import RPi.GPIO as GPIO
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(5, GPIO.IN)
+GPIO.setup(6, GPIO.IN)
+
+while 1:
+	if (GPIO.input(5)):
+		print "Left"
+	if (GPIO.input(6)):
+		print "Right"
+	sleep(2)

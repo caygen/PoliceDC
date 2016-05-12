@@ -16,8 +16,8 @@ dc = 95 # duty cycle (0-100) for PWM pin
 freq = 20000
 pwm_range = 25
 GPIO.setmode(GPIO.BCM) # Broadcom pin-numbering scheme
-red_lower = np.array([124, 0, 210])
-red_upper = np.array([180, 255, 255])
+red_lower = np.array([0, 106, 210])
+red_upper = np.array([81, 178, 255])
 blue_lower = np.array([97, 50, 160])
 blue_upper = np.array([120, 255, 255])
 targetErr = 2
