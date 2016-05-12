@@ -1,21 +1,34 @@
 #!/usr/bin/python
 
-import RPi.GPIO as GPIO
 import time
-import wiringpi
-from PoliceLibrary import *
+import cv2
+import numpy as np
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 import numpy as np
 import threading
 
+
+########################################
+
+class ColorObj:
+    def __init__(self, color=""):
+        self.where = 0
+        self.there = False
+        self.color = color
+    def __str__(self):
+        if self.there:
+            return self.color + " object at " + str(self.where)
+        else:
+            return "no " + self.color + " objects"
+
 ########################
 
 ## Constants
+
 dc = 95 # duty cycle (0-100) for PWM pin
 freq = 20000
 pwm_range = 25
-GPIO.setmode(GPIO.BCM) # Broadcom pin-numbering scheme
 red_lower = np.array([124, 0, 210])
 red_upper = np.array([180, 255, 255])
 blue_lower = np.array([110, 50, 54])
@@ -24,7 +37,9 @@ targetErr = 2
 center_range = 20
 
 ########################
+
 ## Globals Variables
+
 ALLSTOP = False
 target = ColorObj("target")
 redObs = ColorObj("red")
@@ -43,48 +58,6 @@ image_red = None
 image_blue = None
 cor_x = 0
 cor_y = 0
-
-########################
-
-## Motor pinsimshow
-
-robot = Robot()
-
-# A = PWM mode, B = direction, pwmPin = A input
-# frontLeft: A = gray, B = blue, PWM = green
-robot.frontLeft = Motor(A=25, B=24, pwmPin=23, duty=10, range=pwm_range)
-
-# frontRight: A = black, B = yellow, PWM = white
-robot.frontRight = Motor(A=16, B=21, pwmPin=20, duty=10, range=pwm_range)
-
-# rearLeft: A = white, B = gray, PWM = purple
-robot.rearLeft = Motor(A=26, B=19, pwmPin=13, duty=10, range=pwm_range)
-
-# rearRight: A = purple, B = blue, PWM = green
-robot.rearRight = Motor(A=17, B=27, pwmPin=22, duty=10, range=pwm_range)
-
-########################
-
-# Hardware PWM - not using
-pwmPin = 18 # Broadcom pin 18 (P1 pin 12)
-GPIO.setup(pwmPin, GPIO.OUT) # PWM pin set as output
-pwm = GPIO.PWM(pwmPin, 100)  # Initialize PWM
-pwm.start(dc) # Initial state
-
-########################
-
-# Software PWM
-wiringpi.wiringPiSetupGpio()
-wiringpi.softPwmCreate(robot.rearLeft.softPWM, robot.rearLeft.val, robot.rearLeft.range)
-wiringpi.softPwmCreate(robot.rearRight.softPWM, robot.rearRight.val, robot.rearRight.range)
-wiringpi.softPwmCreate(robot.frontLeft.softPWM, robot.frontLeft.val, robot.frontLeft.range)
-wiringpi.softPwmCreate(robot.frontRight.softPWM, robot.frontRight.val, robot.frontRight.range)
-
-########################
-
-## Timer
-TIMEOUT = 120
-startTime = time.time()
 
 ########################
 
@@ -126,23 +99,69 @@ cv2.createTrackbar('b_Hhi', 'mask1', blue_upper[0], 180, tunerCb_blue)
 cv2.createTrackbar('b_Shi', 'mask1', blue_upper[1], 255, tunerCb_blue)
 cv2.createTrackbar('b_Vhi', 'mask1', blue_upper[2], 255, tunerCb_blue)
 
-########################
 
-## Shooter Process
+########################################
 
-class ShooterThread (threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)
-        self.servo = Servo()
-        self.servo.update(30)
+def ColorFilter2(image, hsv, lowerList, upperList, color):
+    """ ColorFilter for multiple range lists """
+    if image is None or hsv is None:
+        return False, [], [], image
+    height, width = image.shape[:2]
 
-    def run(self):
-        print "shooting thread works"
-        while not ALLSTOP:
-            if 1:
-                self.servo.shoot()
+    totalMask = np.ones((height, width), np.uint8)
+    # Filter by HSV color
+    for i in range(len(lowerList)):
+        mask = cv2.inRange(hsv, lowerList[1], upperList[1])
+        mask = cv2.dilate(mask, np.ones((11, 11)))
+        res = cv2.bitwise_and(totalMask, mask, totalMask)
+        
+        ### CALIBRATION ###
+        cv2.imshow("mask"+str(i),mask)
+        cv2.waitKey(1)
+
+    maskImg = np.zeros((height,width,3), np.uint8)
+    res = cv2.bitwise_and(image,image,maskImg,mask=totalMask)
+ 
+    found, coords, targets = findContours(image, totalMask, color)
+    
+    return found, coords, targets, image
+
+########################################
+
+def findContours(image, mask, color, n=3, err=None):
+    """ find n contours in mask and draw on image """
+    
+    height, width = image.shape[:2]
+
+    # Find contours
+    _, contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)
+    
+    # Find centers of blobs and draw blue circle
+    index = -1
+    maxArea = 0
             
-########################
+    found = False
+    coords = []
+    targets = []
+
+    # Draw first n contours
+    for i in range(0, min(len(contours),n)):
+        cv2.drawContours(image, [contours[index]], 0, color)
+        moments = cv2.moments(contours[index])
+        coord = (int(moments['m10']/max(moments['m00'], 1)), int(moments['m01']/max(moments['m00'], 1)))
+        if (coord[0] is not 0 and coord[1] is not 0):
+            cv2.circle(image, coord, 3, color, -1)
+            coords += [coord]
+            exact = int(width/2 - coord[0])
+            if err is None:
+                targets += [exact]
+            else:
+                targets += [x+exact for x in range(-err, err+1)] # exact +/- err
+            found = True
+
+    return found, coords, targets
+
+########################################
 
 ## Camera Processes
 
@@ -170,7 +189,6 @@ class CameraThread (threading.Thread):
         # MouseCb
         self.x = 0
         self.y = 0
-
         
     def run(self):
         global ALLSTOP
@@ -219,14 +237,6 @@ class CameraThread (threading.Thread):
             if len(targetPosList) > 0:
                  target.where = targetPosList[0]
 
-            # Clear obstacles
-            #if len(targetPos_red) is 0:
-            #    redObs.there = False
-            #    redObs.where = 0
-            #if len(targetPos_blue) is 0:
-            #    blueObs.there = False
-            #    blueObs.where = 0
-
             if ALLSTOP:
                  break
 
@@ -234,103 +244,12 @@ class CameraThread (threading.Thread):
             cv2.imshow("hsv", hsv)
             cv2.waitKey(1)
 
-####################
-
-class RedFilterThread (threading.Thread):
-    def __init__(self, lower, upper, id):
-    	threading.Thread.__init__(self)
-        self.lower = lower
-        self.upper = upper
-        self.id = id
-
-    def run(self):
-        global hasTarget_red
-        global targetPos_red
-        global image_red
-        print "Red thread is running"
-        while not ALLSTOP:
-            hasTarget_red, coords_red, targetPos_red, image_red = ColorFilter(image, hsv, self.lower, self.upper, (0,0,255))
-
-####################
-
-class BlueFilterThread (threading.Thread):
-    def __init__(self, lower, upper, id):
-    	threading.Thread.__init__(self)
-        self.lower = lower
-        self.upper = upper
-        self.id = id
-
-    def run(self):
-        global hasTarget_blue
-        global targetPos_blue
-        global image_blue
-        print "Blue thread is running"
-        while not ALLSTOP:
-            hasTarget_blue, coords_blue, targetPos_blue, image_blue = ColorFilter(image, hsv, self.lower, self.upper, (255,0,0))
-
-########################
-
-class Servo:
-
-    def __init__(self, angle=30):
-        self.angle = angle
-
-    def shoot(self):
-        if shootNow:
-            self.update(180)
-            print "shot(s) fired"
-            time.sleep(0.12)
-            self.update(30)
-            #print "reload"
-            time.sleep(1)
-
-    def update(self, angle):
-        global pwm
-        duty = float(angle) / 10.0 + 2.5
-        pwm.ChangeDutyCycle(duty)
-          
-################################################################################
-
-### MAIN FUNCTION
-print("Here we go! Press CTRL+C to exit")
 cameraThread = CameraThread()
 cameraThread.daemon = True
 cameraThread.start()
-
-shooterThread = ShooterThread()
-shooterThread.daemon = True
-shooterThread.start()
-
 try:
-    while 1:
-        robot.setAllSpeeds(30)
-        
-        if target.there and target.where < center_range and target.where > -center_range:
-            robot.forward()
-            shootNow = True
-            print "I see you"
-        elif target.there and target.where < center_range:
-            robot.turnRight()
-            shootNow = False
-            print "Pursuing right",target.where
-        elif target.there and target.where > -center_range:
-            robot.turnLeft()
-            shootNow = False
-            print "Pursuing left",target.where
-        else:
-            shootNow = False
-
-        runTime = 0 #time.time()-startTime
-	if (runTime > TIMEOUT):
-	    print "timeout:",runTime 
-            robot.stop()
-            GPIO.cleanup() # cleanup all GPIO
-            break
-
-# If CTRL+C is pressed, exit cleanly:
-except KeyboardInterrupt:
-    ALLSTOP = True 
-    robot.stop()
-    GPIO.cleanup() # cleanup all GPIO
+	while 1:
+		pass
+except KeyboardInterrupt: 
+    ALLSTOP = True
     cv2.destroyAllWindows()
-

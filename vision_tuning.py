@@ -39,6 +39,8 @@ lower = np.array([124, 0, 210])
 upper = np.array([180, 255, 255])
 Blow = 210
 Bhi = 255
+x_cor = 0
+y_cor = 0
 
 def tunerCb(x):
     global lower
@@ -52,6 +54,14 @@ def tunerCb(x):
     Blow = cv2.getTrackbarPos('Blow', 'hsv')
     return
 
+def mouseCb(event,x,y,flags,param):
+    global x_cor
+    global y_cor
+    if event == cv2.EVENT_LBUTTONDBLCLK:
+        x_cor = x
+        y_cor = y
+
+
 cv2.namedWindow('hsv', cv2.WINDOW_NORMAL)
 cv2.namedWindow('Frame', cv2.WINDOW_NORMAL)
 cv2.createTrackbar('Hlow', 'hsv', lower[0], 180, tunerCb)
@@ -63,14 +73,20 @@ cv2.createTrackbar('Vhi', 'hsv', upper[2], 255, tunerCb)
 cv2.createTrackbar('Blow', 'hsv', Blow, 255, tunerCb)
 cv2.createTrackbar('Bhi', 'hsv', Bhi, 255, tunerCb)
 
+cv2.setMouseCallback('Frame', mouseCb)
 
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     # Grab frame
     image = frame.array
-    image = cv2.resize(image, (200, int(image.shape[0]*200/image.shape[1])), interpolation = cv2.INTER_AREA)
+    image = cv2.resize(image, (100, int(image.shape[0]*100/image.shape[1])), interpolation = cv2.INTER_AREA)
     
     # Get HSV image
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # Print HSV Mouse Values
+    s = hsv[y_cor, x_cor]
+    print "H:",s[0],"S:",s[1],"V:",s[2]
+    cv2.putText(image,"H: "+str(s[0])+" S: "+str(s[1])+" V: "+str(s[2]),(x_cor,y_cor), cv2.FONT_HERSHEY_SIMPLEX, 0.2, 255)
     # Get Gray image
     #gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     #_ , grayMask = cv2.threshold(gray, Blow , Bhi, cv2.THRESH_BINARY)
@@ -99,8 +115,8 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         coord = (int(moments['m10']/max(moments['m00'], 1)), int(moments['m01']/max(moments['m00'], 1)))
         centers.append(coord)
         if (coord[0] is not 0 and coord[1] is not 0):
-	    cv2.circle(image, centers[-1], 3, (255, 0, 0), -1)
-            print "Center at", coord
+			cv2.circle(image, centers[-1], 3, (255, 0, 0), -1)
+            #print "Center at", coord
     
     # Visualize
     cv2.imshow("Frame", image)
