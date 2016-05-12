@@ -8,6 +8,14 @@ from picamera import PiCamera
 import numpy as np
 import threading
 
+###
+# RED (0, 106, 210), (81, 178, 255)
+# BLUE (97, 50, 160), (120, 255, 255)
+
+red_lower = np.array([0, 106, 210])
+red_upper = np.array([81, 178, 255])
+blue_lower = np.array([110, 50, 54])
+blue_upper = np.array([130, 255, 255])
 
 ########################################
 
@@ -29,10 +37,6 @@ class ColorObj:
 dc = 95 # duty cycle (0-100) for PWM pin
 freq = 20000
 pwm_range = 25
-red_lower = np.array([124, 0, 210])
-red_upper = np.array([180, 255, 255])
-blue_lower = np.array([110, 50, 54])
-blue_upper = np.array([130, 255, 255])
 targetErr = 2
 center_range = 20
 
@@ -184,7 +188,8 @@ def mouseCb(event,x,y,flags,param):
 class CameraThread (threading.Thread):
     def __init__(self):
     	threading.Thread.__init__(self)
-        ## Camera
+    	
+        # Camera Settings
         self.camera = PiCamera()
         self.camera.resolution = (640, 480)
         self.camera.framerate = 32
@@ -192,11 +197,15 @@ class CameraThread (threading.Thread):
         self.camera.vflip = True
         self.camera.hflip = True
         self.camera.video_stabilization = True
+        self.camera.iso = 100
         
         # Camera warmup
         time.sleep(0.1)
+        
+        # Camera modes
         self.camera.exposure_mode = 'off'
-        self.camera.awb_mode = 'fluorescent'
+        self.camera.awb_mode = 'off'
+        self.camera.awb_gains = 1.5
 
         # MouseCb
         self.x = 0
@@ -237,7 +246,7 @@ class CameraThread (threading.Thread):
     	    
     	    # Print HSV Mouse Values
             s = hsv[cor_y, cor_x]
-            #print "H:",s[0],"S:",s[1],"V:",s[2]
+            print "H:",s[0],"S:",s[1],"V:",s[2]
             cv2.putText(image,"H: "+str(s[0])+" S: "+str(s[1])+" V: "+str(s[2]),(cor_x,cor_y), cv2.FONT_HERSHEY_SIMPLEX, 0.2, 255)
     	    cv2.circle(image,(cor_x,cor_y),5,(255,0,0))
             target.there, coords, targetPosList, image = ColorFilter2(image, hsv, [red_lower, blue_lower], [red_upper, blue_upper], (0,255,0))

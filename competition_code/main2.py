@@ -18,8 +18,8 @@ pwm_range = 25
 GPIO.setmode(GPIO.BCM) # Broadcom pin-numbering scheme
 red_lower = np.array([124, 0, 210])
 red_upper = np.array([180, 255, 255])
-blue_lower = np.array([110, 50, 54])
-blue_upper = np.array([130, 255, 255])
+blue_lower = np.array([97, 50, 160])
+blue_upper = np.array([120, 255, 255])
 targetErr = 2
 center_range = 20
 
@@ -156,7 +156,7 @@ def mouseCb(event,x,y,flags,param):
 class CameraThread (threading.Thread):
     def __init__(self):
     	threading.Thread.__init__(self)
-        ## Camera
+        # Camera setup
         self.camera = PiCamera()
         self.camera.resolution = (640, 480)
         self.camera.framerate = 32
@@ -164,10 +164,16 @@ class CameraThread (threading.Thread):
         self.camera.vflip = True
         self.camera.hflip = True
         self.camera.video_stabilization = True
+        
         # Camera warmup
         time.sleep(0.1)
+        
+        # Camera configuration
         self.camera.exposure_mode = 'off'
-        self.camera.awb_mode = 'fluorescent'
+        self.camera.awb_mode = 'off'
+        self.camera.awb_gains = 1.5
+        self.camera.iso = 100
+        
         # MouseCb
         self.x = 0
         self.y = 0
@@ -273,7 +279,7 @@ class BlueFilterThread (threading.Thread):
 
 class Servo:
 
-    def __init__(self, angle=30):
+    def __init__(self, angle=43):
         self.angle = angle
 
     def shoot(self):
@@ -281,7 +287,7 @@ class Servo:
             self.update(180)
             print "shot(s) fired"
             time.sleep(0.12)
-            self.update(30)
+            self.update(43)
             #print "reload"
             time.sleep(1)
 

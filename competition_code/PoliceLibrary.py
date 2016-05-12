@@ -46,7 +46,7 @@ def ColorFilter2(image, hsv, lowerList, upperList, color):
     totalMask = np.ones((height, width), np.uint8)
     # Filter by HSV color
     for i in range(len(lowerList)):
-        mask = cv2.inRange(hsv, lowerList[1], upperList[1])
+        mask = cv2.inRange(hsv, lowerList[i], upperList[i])
         mask = cv2.dilate(mask, np.ones((11, 11)))
         res = cv2.bitwise_and(totalMask, mask, totalMask)
         
