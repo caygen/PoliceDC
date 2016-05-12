@@ -192,9 +192,12 @@ class CameraThread (threading.Thread):
         self.camera.vflip = True
         self.camera.hflip = True
         self.camera.video_stabilization = True
+        
         # Camera warmup
         time.sleep(0.1)
         self.camera.exposure_mode = 'off'
+        self.camera.awb_mode = 'fluorescent'
+
         # MouseCb
         self.x = 0
         self.y = 0

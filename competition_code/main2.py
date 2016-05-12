@@ -167,6 +167,7 @@ class CameraThread (threading.Thread):
         # Camera warmup
         time.sleep(0.1)
         self.camera.exposure_mode = 'off'
+        self.camera.awb_mode = 'fluorescent'
         # MouseCb
         self.x = 0
         self.y = 0
