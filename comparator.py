@@ -7,9 +7,9 @@ GPIO.setup(5, GPIO.IN)
 GPIO.setup(6, GPIO.IN)
 
 while 1:
-	if (GPIO.input(5)):
+	if not (GPIO.input(5)):
 		print "Left"
-	if (GPIO.input(6)):
+	if not (GPIO.input(6)):
 		print "Right"
 	#print "I work"
 	sleep(1)

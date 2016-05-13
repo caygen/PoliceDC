@@ -45,17 +45,19 @@ def ColorFilter2(image, hsv, lowerList, upperList, color):
 
     totalMask = np.ones((height, width), np.uint8)
     # Filter by HSV color
+    mask = []
     for i in range(len(lowerList)):
-        mask = cv2.inRange(hsv, lowerList[i], upperList[i])
-        mask = cv2.dilate(mask, np.ones((11, 11)))
+        mask = cv2.inRange(hsv, lowerList[1], upperList[1])
+        #mask = cv2.dilate(mask, np.ones((11, 11)))
         res = cv2.bitwise_and(totalMask, mask, totalMask)
         
         ### CALIBRATION ###
-        #cv2.imshow("mask"+str(i),mask)
-        #cv2.waitKey(1)
-
+        #cv2.imshow("mask"+str(1),mask)
+    
+    #cv2.waitKey(1)
     maskImg = np.zeros((height,width,3), np.uint8)
     res = cv2.bitwise_and(image,image,maskImg,mask=totalMask)
+    #cv2.imshow("total", maskImg)
  
     found, coords, targets = findContours(image, totalMask, color)
     

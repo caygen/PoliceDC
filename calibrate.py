@@ -10,12 +10,13 @@ import threading
 
 ###
 # RED (0, 106, 210), (81, 178, 255)
-# BLUE (97, 50, 160), (120, 255, 255)
+# BLUE (97, 50, 160), (120, 255, 255) - Wed
+# exposure 6660
 
 red_lower = np.array([0, 106, 210])
 red_upper = np.array([81, 178, 255])
-blue_lower = np.array([110, 50, 54])
-blue_upper = np.array([130, 255, 255])
+blue_lower = np.array([97, 50, 160])
+blue_upper = np.array([120, 255, 255])
 
 ########################################
 
@@ -77,13 +78,13 @@ def tunerCb_red(x):
     red_upper[2] = cv2.getTrackbarPos('r_Vhi', 'mask0')
     return
 
-cv2.namedWindow('mask0', cv2.WINDOW_NORMAL)
-cv2.createTrackbar('r_Hlow', 'mask0', red_lower[0], 180, tunerCb_red)
-cv2.createTrackbar('r_Slow', 'mask0', red_lower[1], 255, tunerCb_red)
-cv2.createTrackbar('r_Vlow', 'mask0', red_lower[2], 255, tunerCb_red)
-cv2.createTrackbar('r_Hhi', 'mask0', red_upper[0], 180, tunerCb_red)
-cv2.createTrackbar('r_Shi', 'mask0', red_upper[1], 255, tunerCb_red)
-cv2.createTrackbar('r_Vhi', 'mask0', red_upper[2], 255, tunerCb_red)
+#cv2.namedWindow('mask0', cv2.WINDOW_NORMAL)
+#cv2.createTrackbar('r_Hlow', 'mask0', red_lower[0], 180, tunerCb_red)
+#cv2.createTrackbar('r_Slow', 'mask0', red_lower[1], 255, tunerCb_red)
+#cv2.createTrackbar('r_Vlow', 'mask0', red_lower[2], 255, tunerCb_red)
+#cv2.createTrackbar('r_Hhi', 'mask0', red_upper[0], 180, tunerCb_red)
+#cv2.createTrackbar('r_Shi', 'mask0', red_upper[1], 255, tunerCb_red)
+#cv2.createTrackbar('r_Vhi', 'mask0', red_upper[2], 255, tunerCb_red)
 
 def tunerCb_blue(x):
     global blue_lower
@@ -116,12 +117,12 @@ def ColorFilter2(image, hsv, lowerList, upperList, color):
     # Filter by HSV color
     mask = []
     for i in range(len(lowerList)):
-        mask = cv2.inRange(hsv, lowerList[i], upperList[i])
-        mask = cv2.dilate(mask, np.ones((11, 11)))
+        mask = cv2.inRange(hsv, lowerList[1], upperList[1])
+        #mask = cv2.dilate(mask, np.ones((11, 11)))
         res = cv2.bitwise_and(totalMask, mask, totalMask)
         
         ### CALIBRATION ###
-        cv2.imshow("mask"+str(i),mask)
+        cv2.imshow("mask"+str(1),mask)
     
     cv2.waitKey(1)
     maskImg = np.zeros((height,width,3), np.uint8)
@@ -197,7 +198,7 @@ class CameraThread (threading.Thread):
         self.camera.vflip = True
         self.camera.hflip = True
         self.camera.video_stabilization = True
-        self.camera.iso = 100
+        
         
         # Camera warmup
         time.sleep(0.1)
@@ -205,6 +206,8 @@ class CameraThread (threading.Thread):
         # Camera modes
         self.camera.exposure_mode = 'off'
         self.camera.awb_mode = 'off'
+        self.camera.shutter_speed = 6660
+        self.camera.iso = 100
         self.camera.awb_gains = 1.5
 
         # MouseCb
@@ -236,8 +239,8 @@ class CameraThread (threading.Thread):
         for frame in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
             # Grab frame
     	    big = frame.array
-    	    image = cv2.resize(big, (200, int(big.shape[0]*200/big.shape[1])), interpolation = cv2.INTER_AREA)
-            
+    	    image = cv2.resize(big, (250, int(big.shape[0]*250/big.shape[1])), interpolation = cv2.INTER_AREA)
+            image = image[30:127, :] #img[y:y+h, x:x+w]
             # Cleanup
             self.rawCapture.truncate(0)
             
@@ -246,7 +249,7 @@ class CameraThread (threading.Thread):
     	    
     	    # Print HSV Mouse Values
             s = hsv[cor_y, cor_x]
-            print "H:",s[0],"S:",s[1],"V:",s[2]
+            print "(", cor_x, cor_y, ") H:",s[0],"S:",s[1],"V:",s[2]
             cv2.putText(image,"H: "+str(s[0])+" S: "+str(s[1])+" V: "+str(s[2]),(cor_x,cor_y), cv2.FONT_HERSHEY_SIMPLEX, 0.2, 255)
     	    cv2.circle(image,(cor_x,cor_y),5,(255,0,0))
             target.there, coords, targetPosList, image = ColorFilter2(image, hsv, [red_lower, blue_lower], [red_upper, blue_upper], (0,255,0))
