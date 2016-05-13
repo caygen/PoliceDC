@@ -37,7 +37,7 @@ def ColorFilter(image, hsv, lower, upper, color, err):
 
 ########################################
 
-def ColorFilter2(image, hsv, lowerList, upperList, color):
+def ColorFilter2(image, hsv, lowerList, upperList, color, minArea=500):
     """ ColorFilter for multiple range lists """
     if image is None or hsv is None:
         return False, [], [], image
@@ -50,22 +50,17 @@ def ColorFilter2(image, hsv, lowerList, upperList, color):
         mask = cv2.inRange(hsv, lowerList[1], upperList[1])
         #mask = cv2.dilate(mask, np.ones((11, 11)))
         res = cv2.bitwise_and(totalMask, mask, totalMask)
-        
-        ### CALIBRATION ###
-        #cv2.imshow("mask"+str(1),mask)
     
-    #cv2.waitKey(1)
     maskImg = np.zeros((height,width,3), np.uint8)
     res = cv2.bitwise_and(image,image,maskImg,mask=totalMask)
-    #cv2.imshow("total", maskImg)
- 
-    found, coords, targets = findContours(image, totalMask, color)
+
+    found, coords, targets = findContours(image, totalMask, color, minArea)
     
     return found, coords, targets, image
 
 ########################################
 
-def findContours(image, mask, color, n=3, err=None):
+def findContours(image, mask, color, n=3, err=None,minArea=500):
     """ find n contours in mask and draw on image """
     
     height, width = image.shape[:2]
@@ -83,7 +78,7 @@ def findContours(image, mask, color, n=3, err=None):
 
     for i in range(len(contours)):
 	area = cv2.contourArea(contours[i])
-        if area > maxArea:
+        if area > maxArea and area > minArea:
             index = i
             maxArea = area
 
@@ -160,7 +155,10 @@ class Motor:
         self.mode = "brake"
     
     def set_speed(self, speed):
-        self.val = int(speed/100.0*self.range)
+        if speed is -1:
+            self.val = int(self.duty/100.0*self.range)
+        else:
+            self.val = int(speed/100.0*self.range)
         wiringpi.softPwmWrite(self.softPWM, self.val)
 
     def set_duty(self, duty):
@@ -180,7 +178,7 @@ class Robot:
     def __str__(self):
         return self.action
 
-    def backward(self, t=0.5):
+    def backward(self, t=0.3):
         print "MOVING BACKWARD"
         self.action = "backward"
         self.frontLeft.cw()
@@ -189,7 +187,7 @@ class Robot:
         self.rearRight.ccw()
         time.sleep(t)
 
-    def forward(self, t=0.5):
+    def forward(self, t=0.3):
         print "MOVING FORWARD"
         self.action = "forward"
         self.frontLeft.ccw()
@@ -198,7 +196,7 @@ class Robot:
         self.rearRight.cw()
         time.sleep(t)
 
-    def turnLeft(self, t=0.5):
+    def turnLeft(self, t=0.3):
         print "TURNING LEFT"
         self.action = "left"
         self.frontLeft.cw()
@@ -207,7 +205,7 @@ class Robot:
         self.rearRight.cw()
         time.sleep(t)
 
-    def turnRight(self, t=0.5):
+    def turnRight(self, t=0.3):
         print "TURNING RIGHT"
         self.action = "right"
         self.frontLeft.ccw()
@@ -215,8 +213,33 @@ class Robot:
         self.rearLeft.ccw()
         self.rearRight.ccw()
         time.sleep(t)
+
+    def goLeft(self, t=0.3,s=20):
+        print "GOING LEFT"
+        self.action = "right"
+        self.forward()
+        # slow down right side
+        self.frontLeft.set_speed(s)
+        self.rearLeft.set_speed(s)
+        time.sleep(t)
+        # reset to original speed
+        self.frontLeft.set_speed(-1)
+        self.rearLeft.set_speed(-1)
+        
+    def goRight(self, t=0.3,s=20):
+        print "GOING RIGHT"
+        self.action = "right"
+        self.forward()
+        # slow down right side
+        self.frontRight.set_speed(s)
+        self.rearRight.set_speed(s)
+        time.sleep(t)
+        # reset to original speed
+        self.frontRight.set_speed(-1)
+        self.rearRight.set_speed(-1)
     
-    def stop(self, t=0.5):
+    
+    def stop(self, t=0.1):
         print "STOPPING"
         self.action = "stop"
         self.frontLeft.brake()

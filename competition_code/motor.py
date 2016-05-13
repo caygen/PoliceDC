@@ -56,17 +56,11 @@ print("Here we go! Press CTRL+C to exit")
 try:
     while 1:
         robot.setAllSpeeds(30)
-        #robot.forward(2)
-        #robot.turnLeft(2)
-        #robot.turnRight(2)
-        #robot.backward(2)
-        robot.frontLeft.cw()
-        robot.frontRight.cw()
-        time.sleep(2)
-        robot.frontLeft.ccw()
-        robot.frontRight.ccw()
+        robot.forward()
+        robot.turnLeft()
+        robot.turnRight()
+        robot.backward()
         
-        time.sleep(2)
 #FR, FL = reverse; RR, RL = normal # cw is faster
 	#robot.rearLeft.ccw()
 	#print robot.rearRight.mode

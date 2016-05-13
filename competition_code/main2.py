@@ -24,6 +24,7 @@ blue_upper = np.array([120, 255, 255])
 targetErr = 2
 res_var = 300
 center_range = res_var/10
+minArea = center_range * center_range
 
 ########################
 ## Globals Variables
@@ -114,7 +115,7 @@ class ComparatorThread (threading.Thread):
         while 1:
             leftEdge = not GPIO.input(5)
             rightEdge = not GPIO.input(6)
-            sleep(0.5)
+            time.sleep(0.5)
 
 
 ########################
@@ -164,7 +165,7 @@ class CameraThread (threading.Thread):
     	    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
             
             # Color Filter
-            target.there, coords, targetPosList, image = ColorFilter2(image, hsv, [red_lower, blue_lower], [red_upper, blue_upper], (0,255,0))
+            target.there, coords, targetPosList, image = ColorFilter2(image, hsv, [red_lower, blue_lower], [red_upper, blue_upper], (0,255,0), minArea)
             
             # Handle target
             targetPosList = list(set(targetPosList))
@@ -174,10 +175,6 @@ class CameraThread (threading.Thread):
 
             if ALLSTOP:
                  break
-
-            #cv2.imshow("image", image)
-            #cv2.imshow("hsv", hsv)
-            #cv2.waitKey(1)
 
 ########################
 
@@ -205,10 +202,6 @@ class Servo:
 ### MAIN FUNCTION
 print("Here we go! Press CTRL+C to exit")
 ### CALIBRATION ###
-#cv2.namedWindow("image", cv2.WINDOW_NORMAL)
-#cv2.namedWindow("mask0", cv2.WINDOW_NORMAL)
-#cv2.namedWindow("mask1", cv2.WINDOW_NORMAL)
-#cv2.namedWindow("hsv", cv2.WINDOW_NORMAL)
 cameraThread = CameraThread()
 cameraThread.daemon = True
 cameraThread.start()
@@ -226,7 +219,7 @@ try:
         robot.setAllSpeeds(30)
         if leftEdge and rightEdge:
             shootNow = False
-            robot.stop()
+            robot.reverse(0.5)
             #robot.turnRight()
             print "Ack! I'm going to fall"
         elif leftEdge:
@@ -242,11 +235,11 @@ try:
             robot.forward()
             print "I see you"
         elif target.there and target.where < center_range:
-            robot.turnRight()
+            robot.goRight()
             shootNow = False
             print "Pursuing right",target.where
         elif target.there and target.where > -center_range:
-            robot.turnLeft()
+            robot.goLeft()
             shootNow = False
             print "Pursuing left",target.where
         else:
@@ -257,17 +250,10 @@ try:
             elif nextMove < 2:
                 robot.turnRight()
             else:
-                robot.forward()
-            print "Picking random move", nextMove
+                #robot.forward()
+                robot.stop()
+            print "Exploring", nextMove
 		
-        runTime = 0 #time.time()-startTime
-        if (runTime > TIMEOUT):
-            print "timeout:",runTime
-            ALLSTOP = True  
-            robot.stop()
-            GPIO.cleanup() # cleanup all GPIO
-            cv2.destroyAllWindows()
-            break
 
 # If CTRL+C is pressed, exit cleanly:
 except KeyboardInterrupt:
