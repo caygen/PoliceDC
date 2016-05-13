@@ -11,4 +11,5 @@ while 1:
 		print "Left"
 	if (GPIO.input(6)):
 		print "Right"
-	sleep(2)
+	#print "I work"
+	sleep(1)

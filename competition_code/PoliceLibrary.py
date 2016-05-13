@@ -51,8 +51,8 @@ def ColorFilter2(image, hsv, lowerList, upperList, color):
         res = cv2.bitwise_and(totalMask, mask, totalMask)
         
         ### CALIBRATION ###
-        cv2.imshow("mask"+str(i),mask)
-        cv2.waitKey(1)
+        #cv2.imshow("mask"+str(i),mask)
+        #cv2.waitKey(1)
 
     maskImg = np.zeros((height,width,3), np.uint8)
     res = cv2.bitwise_and(image,image,maskImg,mask=totalMask)

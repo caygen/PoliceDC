@@ -21,7 +21,13 @@ long_line_behaviour=1
 long_line_column=72
 
 [files]
-current_page=-1
+current_page=5
+FILE_NAME_0=529;Python;0;16;0;1;0;%2Fhome%2Fpi%2Fdc_code%2Fcompetition_code%2Fmain2.py;0;4
+FILE_NAME_1=1689;Python;0;16;1;1;0;%2Fhome%2Fpi%2Fdc_code%2Fcompetition_code%2FPoliceLibrary.py;0;4
+FILE_NAME_2=204;Python;0;16;1;1;0;%2Fhome%2Fpi%2Fdc_code%2Fcalibrate.py;0;4
+FILE_NAME_3=0;Python;0;16;1;1;0;%2Fhome%2Fpi%2Fdc_code%2Fvision_tuning.py;0;4
+FILE_NAME_4=66;Python;0;16;1;1;0;%2Fhome%2Fpi%2Fdc_code%2Fshooter.py;0;4
+FILE_NAME_5=217;Python;0;16;1;1;0;%2Fhome%2Fpi%2Fdc_code%2Fcomparator.py;0;4
 
 [VTE]
 last_dir=/home/pi

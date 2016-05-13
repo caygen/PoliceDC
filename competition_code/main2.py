@@ -8,6 +8,7 @@ from picamera.array import PiRGBArray
 from picamera import PiCamera
 import numpy as np
 import threading
+from random import randint
 
 ########################
 
@@ -27,26 +28,20 @@ center_range = 20
 ## Globals Variables
 ALLSTOP = False
 target = ColorObj("target")
-redObs = ColorObj("red")
-blueObs = ColorObj("blue")
-greenObs = ColorObj("green")
-yellowObs = ColorObj("yellow")
-orangeObs = ColorObj("orange")
+#redObs = ColorObj("red")
+#blueObs = ColorObj("blue")
+#greenObs = ColorObj("green")
+#yellowObs = ColorObj("yellow")
+#orangeObs = ColorObj("orange")
 shootNow = False
-hasTarget_red = False
-targetPos_red = []
-hasTarget_blue = False
-targetPos_blue = []
 image = None
 hsv = None
-image_red = None
-image_blue = None
-cor_x = 0
-cor_y = 0
+leftEdge = False
+rightEdge = False
 
 ########################
 
-## Motor pinsimshow
+## Motor pin
 
 robot = Robot()
 
@@ -88,46 +83,6 @@ startTime = time.time()
 
 ########################
 
-## Camera Tuning
-
-def tunerCb_red(x):
-    global red_lower
-    red_lower[0] = cv2.getTrackbarPos('r_Hlow', 'mask0')
-    red_lower[1] = cv2.getTrackbarPos('r_Slow', 'mask0')
-    red_lower[2] = cv2.getTrackbarPos('r_Vlow', 'mask0')
-    red_upper[0] = cv2.getTrackbarPos('r_Hhi', 'mask0')
-    red_upper[1] = cv2.getTrackbarPos('r_Shi', 'mask0')
-    red_upper[2] = cv2.getTrackbarPos('r_Vhi', 'mask0')
-    return
-
-cv2.namedWindow('mask0', cv2.WINDOW_NORMAL)
-cv2.createTrackbar('r_Hlow', 'mask0', red_lower[0], 180, tunerCb_red)
-cv2.createTrackbar('r_Slow', 'mask0', red_lower[1], 255, tunerCb_red)
-cv2.createTrackbar('r_Vlow', 'mask0', red_lower[2], 255, tunerCb_red)
-cv2.createTrackbar('r_Hhi', 'mask0', red_upper[0], 180, tunerCb_red)
-cv2.createTrackbar('r_Shi', 'mask0', red_upper[1], 255, tunerCb_red)
-cv2.createTrackbar('r_Vhi', 'mask0', red_upper[2], 255, tunerCb_red)
-
-def tunerCb_blue(x):
-    global blue_lower
-    blue_lower[0] = cv2.getTrackbarPos('b_Hlow', 'mask1')
-    blue_lower[1] = cv2.getTrackbarPos('b_Slow', 'mask1')
-    blue_lower[2] = cv2.getTrackbarPos('b_Vlow', 'mask1')
-    blue_upper[0] = cv2.getTrackbarPos('b_Hhi', 'mask1')
-    blue_upper[1] = cv2.getTrackbarPos('b_Shi', 'mask1')
-    blue_upper[2] = cv2.getTrackbarPos('b_Vhi', 'mask1')
-    return
-
-cv2.namedWindow('mask1', cv2.WINDOW_NORMAL)
-cv2.createTrackbar('b_Hlow', 'mask1', blue_lower[0], 180, tunerCb_blue)
-cv2.createTrackbar('b_Slow', 'mask1', blue_lower[1], 255, tunerCb_blue)
-cv2.createTrackbar('b_Vlow', 'mask1', blue_lower[2], 255, tunerCb_blue)
-cv2.createTrackbar('b_Hhi', 'mask1', blue_upper[0], 180, tunerCb_blue)
-cv2.createTrackbar('b_Shi', 'mask1', blue_upper[1], 255, tunerCb_blue)
-cv2.createTrackbar('b_Vhi', 'mask1', blue_upper[2], 255, tunerCb_blue)
-
-########################
-
 ## Shooter Process
 
 class ShooterThread (threading.Thread):
@@ -141,17 +96,29 @@ class ShooterThread (threading.Thread):
         while not ALLSTOP:
             if 1:
                 self.servo.shoot()
-            
+                
+########################
+
+## Comparator Process
+
+class ComparatorThread (threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        print "Comparator thread is running"
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(5, GPIO.IN)
+        GPIO.setup(6, GPIO.IN)
+
+    def run(self):
+        while 1:
+            leftEdge = GPIO.input(5)
+            rightEdge = GPIO.input(6)
+            sleep(0.5)
+
+
 ########################
 
 ## Camera Processes
-
-def mouseCb(event,x,y,flags,param):
-    global cor_x
-    global cor_y
-    if event == cv2.EVENT_LBUTTONDBLCLK:
-        cor_x = x
-        cor_y = y
 
 class CameraThread (threading.Thread):
     def __init__(self):
@@ -173,35 +140,15 @@ class CameraThread (threading.Thread):
         self.camera.awb_mode = 'off'
         self.camera.awb_gains = 1.5
         self.camera.iso = 100
-        
-        # MouseCb
-        self.x = 0
-        self.y = 0
 
         
     def run(self):
         global ALLSTOP
         global target
-        global hasTarget_red
-        global targetPos_red
-        global hasTarget_blue
-        global targetPos_blue
-        global hasRedObs
-        global hasBlueObs
-        global blueObsPos
-        global redObsPos
-        global cor_x
-        global cor_y
-        
+
         print "Camera thread is running"
         
-        ### CALIBRATION ###
-        cv2.namedWindow("image", cv2.WINDOW_NORMAL)
-        cv2.namedWindow("mask0", cv2.WINDOW_NORMAL)
-        cv2.namedWindow("mask1", cv2.WINDOW_NORMAL)
-        cv2.namedWindow("hsv", cv2.WINDOW_NORMAL)
-        cv2.setMouseCallback("image", mouseCb)
-        
+
         for frame in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
             # Grab frame
     	    big = frame.array
@@ -212,68 +159,22 @@ class CameraThread (threading.Thread):
             
     	    # Get HSV image
     	    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    	    
-    	    # Print HSV Mouse Values
-            s = hsv[cor_y, cor_x]
-            #print "H:",s[0],"S:",s[1],"V:",s[2]
-            cv2.putText(image,"H: "+str(s[0])+" S: "+str(s[1])+" V: "+str(s[2]),(cor_x,cor_y), cv2.FONT_HERSHEY_SIMPLEX, 0.2, 255)
-    	    
+            
+            # Color Filter
             target.there, coords, targetPosList, image = ColorFilter2(image, hsv, [red_lower, blue_lower], [red_upper, blue_upper], (0,255,0))
             
+            # Handle target
             targetPosList = list(set(targetPosList))
-            #print "Target",target.there,"at",targetPosList
             
             if len(targetPosList) > 0:
                  target.where = targetPosList[0]
 
-            # Clear obstacles
-            #if len(targetPos_red) is 0:
-            #    redObs.there = False
-            #    redObs.where = 0
-            #if len(targetPos_blue) is 0:
-            #    blueObs.there = False
-            #    blueObs.where = 0
-
             if ALLSTOP:
                  break
 
-            cv2.imshow("image", image)
-            cv2.imshow("hsv", hsv)
-            cv2.waitKey(1)
-
-####################
-
-class RedFilterThread (threading.Thread):
-    def __init__(self, lower, upper, id):
-    	threading.Thread.__init__(self)
-        self.lower = lower
-        self.upper = upper
-        self.id = id
-
-    def run(self):
-        global hasTarget_red
-        global targetPos_red
-        global image_red
-        print "Red thread is running"
-        while not ALLSTOP:
-            hasTarget_red, coords_red, targetPos_red, image_red = ColorFilter(image, hsv, self.lower, self.upper, (0,0,255))
-
-####################
-
-class BlueFilterThread (threading.Thread):
-    def __init__(self, lower, upper, id):
-    	threading.Thread.__init__(self)
-        self.lower = lower
-        self.upper = upper
-        self.id = id
-
-    def run(self):
-        global hasTarget_blue
-        global targetPos_blue
-        global image_blue
-        print "Blue thread is running"
-        while not ALLSTOP:
-            hasTarget_blue, coords_blue, targetPos_blue, image_blue = ColorFilter(image, hsv, self.lower, self.upper, (255,0,0))
+            #cv2.imshow("image", image)
+            #cv2.imshow("hsv", hsv)
+            #cv2.waitKey(1)
 
 ########################
 
@@ -300,6 +201,11 @@ class Servo:
 
 ### MAIN FUNCTION
 print("Here we go! Press CTRL+C to exit")
+### CALIBRATION ###
+#cv2.namedWindow("image", cv2.WINDOW_NORMAL)
+#cv2.namedWindow("mask0", cv2.WINDOW_NORMAL)
+#cv2.namedWindow("mask1", cv2.WINDOW_NORMAL)
+#cv2.namedWindow("hsv", cv2.WINDOW_NORMAL)
 cameraThread = CameraThread()
 cameraThread.daemon = True
 cameraThread.start()
@@ -311,10 +217,22 @@ shooterThread.start()
 try:
     while 1:
         robot.setAllSpeeds(30)
-        
-        if target.there and target.where < center_range and target.where > -center_range:
-            robot.forward()
+        if leftEdge and rightEdge:
+            shootNow = False
+            robot.stop()
+            robot.turnRight()
+            print "Ack! I'm going to fall"
+        elif leftEdge:
+            shootNow = False
+            robot.turnRight()
+            print "Avoiding left edge"
+        elif rightEdge:
+            shootNow = False
+            robot.turnLeft()
+            print "Avoiding right edge"
+        elif target.there and target.where < center_range and target.where > -center_range:
             shootNow = True
+            robot.forward()
             print "I see you"
         elif target.there and target.where < center_range:
             robot.turnRight()
@@ -326,12 +244,21 @@ try:
             print "Pursuing left",target.where
         else:
             shootNow = False
-
+            nextMove = randint(0, 5)
+            if nextMove < 1:
+                robot.turnLeft()
+            elif nextMove < 2:
+                robot.turnRight()
+            else:
+                robot.forward()
+            print "Picking random move", nextMove
         runTime = 0 #time.time()-startTime
 	if (runTime > TIMEOUT):
-	    print "timeout:",runTime 
+	    print "timeout:",runTime
+	        ALLSTOP = True  
             robot.stop()
             GPIO.cleanup() # cleanup all GPIO
+            cv2.destroyAllWindows()
             break
 
 # If CTRL+C is pressed, exit cleanly:
