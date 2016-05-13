@@ -130,10 +130,10 @@ class Motor:
         self.A = A
         self.B = B
         self.mode = "brake"
-	self.duty = duty
-	self.val = int(duty/100.0*range)
-	self.range = range
-	self.softPWM = pwmPin
+        self.duty = duty
+        self.val = int(duty/100.0*range)
+        self.range = range
+        self.softPWM = pwmPin
         GPIO.setup(A, GPIO.OUT)
         GPIO.setup(B, GPIO.OUT)
         self.brake()
@@ -142,26 +142,26 @@ class Motor:
         return "Pin A: " + str(self.A) + ", Pin B: " + str(self.B) + ", Mode: " + self.mode
 
     def cw(self):
-	self.set_speed(self.duty)
+        self.set_speed(self.duty)
         GPIO.output(self.A, GPIO.HIGH)
-	GPIO.output(self.B, GPIO.LOW)
+        GPIO.output(self.B, GPIO.LOW)
         self.mode = "cw"
 
     def ccw(self):
-	self.set_speed(self.duty)
-	GPIO.output(self.A, GPIO.HIGH)
+        self.set_speed(self.duty)
+        GPIO.output(self.A, GPIO.HIGH)
         GPIO.output(self.B, GPIO.HIGH)
         self.mode = "ccw"
 
     def brake(self):
-	self.set_speed(0)
-	GPIO.output(self.A, GPIO.HIGH)
+        self.set_speed(0)
+        GPIO.output(self.A, GPIO.HIGH)
         GPIO.output(self.B, GPIO.LOW)
         self.mode = "brake"
     
     def set_speed(self, speed):
-	self.val = int(speed/100.0*self.range)
-	wiringpi.softPwmWrite(self.softPWM, self.val)
+        self.val = int(speed/100.0*self.range)
+        wiringpi.softPwmWrite(self.softPWM, self.val)
 
     def set_duty(self, duty):
         self.duty = duty

@@ -22,7 +22,8 @@ red_upper = np.array([81, 178, 255])
 blue_lower = np.array([97, 50, 160])
 blue_upper = np.array([120, 255, 255])
 targetErr = 2
-center_range = res_val/10
+res_var = 300
+center_range = res_var/10
 
 ########################
 ## Globals Variables
@@ -46,17 +47,17 @@ rightEdge = False
 robot = Robot()
 
 # A = PWM mode, B = direction, pwmPin = A input
-# frontLeft: A = gray, B = blue, PWM = green
-robot.frontLeft = Motor(A=25, B=24, pwmPin=23, duty=10, range=pwm_range)
+# rearLeft: A = gray, B = blue, PWM = green
+robot.rearLeft = Motor(A=25, B=24, pwmPin=23, duty=10, range=pwm_range)
 
-# frontRight: A = black, B = yellow, PWM = white
-robot.frontRight = Motor(A=16, B=21, pwmPin=20, duty=10, range=pwm_range)
+# rearRight: A = black, B = yellow, PWM = white
+robot.rearRight = Motor(A=16, B=21, pwmPin=20, duty=10, range=pwm_range)
 
-# rearLeft: A = white, B = gray, PWM = purple
-robot.rearLeft = Motor(A=26, B=19, pwmPin=13, duty=10, range=pwm_range)
+# frontLeft: A = white, B = gray, PWM = purple
+robot.frontLeft = Motor(A=26, B=19, pwmPin=13, duty=10, range=pwm_range)
 
-# rearRight: A = purple, B = blue, PWM = green
-robot.rearRight = Motor(A=17, B=27, pwmPin=22, duty=10, range=pwm_range)
+# frontRight: A = purple, B = blue, PWM = green
+robot.frontRight = Motor(A=17, B=27, pwmPin=22, duty=10, range=pwm_range)
 
 ########################
 
@@ -153,8 +154,7 @@ class CameraThread (threading.Thread):
         for frame in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
             # Grab frame
     	    big = frame.array
-            res_var = 300
-    	    image = cv2.resize(big, (res_val, int(big.shape[0]*res_val/big.shape[1])), interpolation = cv2.INTER_AREA)
+    	    image = cv2.resize(big, (res_var, int(big.shape[0]*res_var/big.shape[1])), interpolation = cv2.INTER_AREA)
             image = image[30:127, :] #img[y:y+h, x:x+w]
             
             # Cleanup
@@ -231,30 +231,29 @@ try:
             print "Ack! I'm going to fall"
         elif leftEdge:
             shootNow = False
-            #robot.turnRight()
+            robot.turnRight()
             print "Avoiding left edge"
         elif rightEdge:
             shootNow = False
-            #robot.turnLeft()
+            robot.turnLeft()
             print "Avoiding right edge"
         elif target.there and target.where < center_range and target.where > -center_range:
             shootNow = True
-            #robot.forward()
+            robot.forward()
             print "I see you"
         elif target.there and target.where < center_range:
-            #robot.turnRight()
+            robot.turnRight()
             shootNow = False
             print "Pursuing right",target.where
         elif target.there and target.where > -center_range:
-            #robot.turnLeft()
+            robot.turnLeft()
             shootNow = False
             print "Pursuing left",target.where
         else:
             shootNow = False
-            nextMove = 0 #randint(0, 5)
+            nextMove = 2 #randint(0, 5)
             if nextMove < 1:
-                pass
-                #robot.turnLeft()
+                robot.turnLeft()
             elif nextMove < 2:
                 robot.turnRight()
             else:
