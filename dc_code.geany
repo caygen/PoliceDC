@@ -22,13 +22,13 @@ long_line_behaviour=1
 long_line_column=72
 
 [files]
-current_page=5
-FILE_NAME_0=6527;Python;0;16;0;1;0;%2Fhome%2Fpi%2Fdc_code%2Fcompetition_code%2FPoliceLibrary.py;0;4
-FILE_NAME_1=152;Python;0;16;1;1;0;%2Fhome%2Fpi%2Fdc_code%2Fshooter.py;0;4
-FILE_NAME_2=65;Python;0;16;1;1;0;%2Fhome%2Fpi%2Fdc_code%2Fcomparator.py;0;4
+current_page=2
+FILE_NAME_0=5933;Python;0;16;0;1;0;%2Fhome%2Fpi%2Fdc_code%2Fcompetition_code%2FPoliceLibrary.py;0;4
+FILE_NAME_1=474;Python;0;16;1;1;0;%2Fhome%2Fpi%2Fdc_code%2Fshooter.py;0;4
+FILE_NAME_2=228;Python;0;16;1;1;0;%2Fhome%2Fpi%2Fdc_code%2Fcomparator.py;0;4
 FILE_NAME_3=3070;Python;0;16;0;1;0;%2Fhome%2Fpi%2Fdc_code%2Fcompetition_code%2Fmain2.py;0;4
 FILE_NAME_4=4018;Python;0;16;1;1;0;%2Fhome%2Fpi%2Fdc_code%2Fcalibrate.py;0;4
-FILE_NAME_5=1843;Python;0;16;0;1;0;%2Fhome%2Fpi%2Fdc_code%2Fcompetition_code%2Fmotor.py;0;4
+FILE_NAME_5=1509;Python;0;16;0;1;0;%2Fhome%2Fpi%2Fdc_code%2Fcompetition_code%2Fmotor.py;0;4
 
 [VTE]
 last_dir=/home/pi

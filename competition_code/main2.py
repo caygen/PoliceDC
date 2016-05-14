@@ -29,6 +29,15 @@ last_seen = "unknown" # Last seen direction of target
 last_time = 10 # Last time since target seen
 time_out = 5 # Ignore targets seen longer than time_out seconds ago
 
+## Command sequence
+C_FORWARD = 0
+C_LTURN = 1
+C_RTURN = 2
+C_REVERSE = 3
+C_LEFT = 4
+C_RIGHT = 5
+C_LIST = []
+
 ########################
 ## Globals Variables
 ALLSTOP = False
@@ -50,8 +59,8 @@ isBump = False
 
 ## Comparator pins
 
-left_comp = 5
-right_comp = 6
+left_comp = 9
+right_comp = 11
 
 ########################
 
@@ -67,16 +76,16 @@ robot = Robot()
 
 # A = PWM mode, B = direction, pwmPin = A input
 # rearLeft: A = gray, B = blue, PWM = green
-robot.rearLeft = Motor(A=25, B=24, pwmPin=23, duty=30, range=pwm_range)
+robot.rearLeft = Motor(A=25, B=24, pwmPin=23, duty=60, range=pwm_range)
 
 # rearRight: A = black, B = yellow, PWM = white
-robot.rearRight = Motor(A=16, B=21, pwmPin=20, duty=30, range=pwm_range)
+robot.rearRight = Motor(A=16, B=21, pwmPin=20, duty=65, range=pwm_range)
 
 # frontLeft: A = white, B = gray, PWM = purple
-robot.frontLeft = Motor(A=26, B=19, pwmPin=13, duty=30, range=pwm_range)
+robot.frontLeft = Motor(A=26, B=19, pwmPin=13, duty=60, range=pwm_range)
 
 # frontRight: A = purple, B = blue, PWM = green
-robot.frontRight = Motor(A=17, B=27, pwmPin=22, duty=30, range=pwm_range)
+robot.frontRight = Motor(A=22, B=27, pwmPin=17, duty=65, range=pwm_range)
 
 ########################
 
@@ -177,6 +186,8 @@ class CameraThread (threading.Thread):
     def run(self):
         global ALLSTOP
         global target
+        global last_seen
+        global last_time
 
         print "Camera thread start"
         
@@ -199,12 +210,13 @@ class CameraThread (threading.Thread):
             if target.there:
                 if target.where < center_range and target.where > -center_range:
                     last_seen = "center"
-                elif target.where > center_range:
+                elif target.where <= center_range:
                     last_seen = "right"
-                elif target.where < -center_range:
+                elif target.where >= -center_range:
                     last_seen = "left"
                 last_time = time.clock()
-                
+            
+            #print "Target", target.there, last_time, last_seen
 
             if ALLSTOP:
                  break
@@ -263,11 +275,12 @@ print "Waited", now
 
 try:
     while 1:
+        print "Target", target.there, last_time, last_seen
         # stop if about to go off edge
-        if leftEdge and rightEdge:
+        if leftEdge and rightEdge or isBump:
             shootNow = False
             robot.reverse(0.5)
-            #robot.turnRight()
+            #robot.turnRight
             print "!!!  I'm going to fall !!!"
         # turn right if about to fall off left
         elif leftEdge: 
@@ -280,17 +293,17 @@ try:
             robot.turnLeft()
             print "<-- Avoiding right edge"
         # shoot & go forward if target seen
-        elif target.there and last_seen is "center": 
+        elif target.there and last_seen == "center": 
             shootNow = True
             robot.forward()
             print "I see you"
         # chase target right
-        elif target.there and last_seen is "right": 
+        elif target.there and last_seen =="right": 
             robot.goRight(int(2*target.where/res_var*turn_ratio))
             shootNow = False
             print "-> Pursuing right",target.where
         # chase target left
-        elif target.there and last_seen is "left":
+        elif target.there and last_seen =="left":
             robot.goLeft(int(2*target.where/res_var*turn_ratio))
             shootNow = False
             print "<- Pursuing left",target.where
@@ -306,7 +319,7 @@ try:
             print "--> Remember right"
         # no idea, guess??
         else: 
-            nextMove = randint(0, 8)
+            nextMove = 6 #randint(0, 8)
             if nextMove < 1:
                 robot.goLeft()
             elif nextMove < 2:
@@ -316,8 +329,8 @@ try:
             elif nextMove < 6:
                 robot.turnRight()
             else:
-                #robot.forward()
-                robot.stop()
+                robot.forward()
+                #robot.stop()
             print "? Exploring", nextMove
             
         # Remove old targets

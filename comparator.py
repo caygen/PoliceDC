@@ -2,8 +2,8 @@
 from time import sleep
 import RPi.GPIO as GPIO
 
-left_comp = 5
-right_comp = 6
+left_comp = 9
+right_comp = 11
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(left_comp, GPIO.IN)
@@ -23,9 +23,14 @@ GPIO.add_event_detect(right_comp, GPIO.BOTH, callback=RightComparatorCb)
 
 print "started"
 while 1:
-	pass
-	#left = GPIO.input(5)
-	#right = GPIO.input(6)
+	
+	print "left",GPIO.input(9)
+	print "right",GPIO.input(11)
+	#if GPIO.input(9) is 0:
+		#print "left"
+	#if GPIO.input(11) is 0:
+		#print "right"
+		
 	#if left is 0:
 		#print "Left off"
 	#else:
@@ -35,3 +40,5 @@ while 1:
 	#else:
 		#print "Right safe"
 	#sleep(1)
+except KeyboardInterrupt:
+    GPIO.cleanup() # cleanup all GPIO
