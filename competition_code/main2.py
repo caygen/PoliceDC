@@ -17,14 +17,17 @@ dc = 95 # duty cycle (0-100) for PWM pin
 freq = 20000
 pwm_range = 25
 GPIO.setmode(GPIO.BCM) # Broadcom pin-numbering scheme
-red_lower = np.array([0, 106, 210])
+red_lower = np.array([0, 106, 210]) # Red color parameters
 red_upper = np.array([81, 178, 255])
-blue_lower = np.array([97, 50, 160])
+blue_lower = np.array([97, 50, 160]) # Blue color paramters
 blue_upper = np.array([120, 255, 255])
-targetErr = 2
-res_var = 300
-center_range = res_var/10
-minArea = center_range * center_range
+res_var = 300 # Image width
+center_range = res_var/10 # Center range to shoot
+minArea = center_range * center_range # Minimum area to detect
+turn_ratio = 0.7 # Speed reduction for turning
+last_seen = "unknown" # Last seen direction of target
+last_time = 10 # Last time since target seen
+time_out = 5 # Ignore targets seen longer than time_out seconds ago
 
 ########################
 ## Globals Variables
@@ -41,6 +44,14 @@ hsv = None
 leftEdge = False
 rightEdge = False
 
+
+########################
+
+## Comparator pins
+
+left_comp = 5
+right_comp = 6
+
 ########################
 
 ## Motor pin
@@ -49,20 +60,20 @@ robot = Robot()
 
 # A = PWM mode, B = direction, pwmPin = A input
 # rearLeft: A = gray, B = blue, PWM = green
-robot.rearLeft = Motor(A=25, B=24, pwmPin=23, duty=10, range=pwm_range)
+robot.rearLeft = Motor(A=25, B=24, pwmPin=23, duty=30, range=pwm_range)
 
 # rearRight: A = black, B = yellow, PWM = white
-robot.rearRight = Motor(A=16, B=21, pwmPin=20, duty=10, range=pwm_range)
+robot.rearRight = Motor(A=16, B=21, pwmPin=20, duty=30, range=pwm_range)
 
 # frontLeft: A = white, B = gray, PWM = purple
-robot.frontLeft = Motor(A=26, B=19, pwmPin=13, duty=10, range=pwm_range)
+robot.frontLeft = Motor(A=26, B=19, pwmPin=13, duty=30, range=pwm_range)
 
 # frontRight: A = purple, B = blue, PWM = green
-robot.frontRight = Motor(A=17, B=27, pwmPin=22, duty=10, range=pwm_range)
+robot.frontRight = Motor(A=17, B=27, pwmPin=22, duty=30, range=pwm_range)
 
 ########################
 
-# Hardware PWM - not using
+# Hardware PWM - for shooter servo
 pwmPin = 18 # Broadcom pin 18 (P1 pin 12)
 GPIO.setup(pwmPin, GPIO.OUT) # PWM pin set as output
 pwm = GPIO.PWM(pwmPin, 50)  # Initialize PWM
@@ -79,12 +90,6 @@ wiringpi.softPwmCreate(robot.frontRight.softPWM, robot.frontRight.val, robot.fro
 
 ########################
 
-## Timer
-TIMEOUT = 120
-startTime = time.time()
-
-########################
-
 ## Shooter Process
 
 class ShooterThread (threading.Thread):
@@ -94,29 +99,38 @@ class ShooterThread (threading.Thread):
         self.servo.update(30)
 
     def run(self):
-        print "shooting thread works"
+        print "Shooting thread start"
         while not ALLSTOP:
             if 1:
                 self.servo.shoot()
                 
 ########################
 
-## Comparator Process
+## Comparator Process - using callbacks instead of thread
 
 class ComparatorThread (threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
-        print "Comparator thread is running"
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(5, GPIO.IN)
-        GPIO.setup(6, GPIO.IN)
+        GPIO.setup(left_comp, GPIO.IN)
+        GPIO.setup(right_comp, GPIO.IN)
 
     def run(self):
+        print "Comparator thread start"
+        GPIO.wait_for_edge(left_com, GPIO.RISING)
         while 1:
-            leftEdge = not GPIO.input(5)
-            rightEdge = not GPIO.input(6)
-            time.sleep(0.5)
+            leftEdge = not GPIO.input(left_comp)
+            rightEdge = not GPIO.input(right_comp)
+            time.sleep(0.2)
 
+def LeftComparatorCb(channel):
+    leftEdge = not GPIO.input(left_comp)
+    print "LEFT EDGE", leftEdge
+    
+
+def RightComparatorCb(channel):
+    rightEdge = not GPIO.input(right_comp)
+    print "RIGHT EDGE", rightEdge
 
 ########################
 
@@ -149,7 +163,7 @@ class CameraThread (threading.Thread):
         global ALLSTOP
         global target
 
-        print "Camera thread is running"
+        print "Camera thread start"
         
 
         for frame in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
@@ -165,13 +179,17 @@ class CameraThread (threading.Thread):
     	    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
             
             # Color Filter
-            target.there, coords, targetPosList, image = ColorFilter2(image, hsv, [red_lower, blue_lower], [red_upper, blue_upper], (0,255,0), minArea)
+            target.there, coords, target.where, image = ColorFilter2(image, hsv, [red_lower, blue_lower], [red_upper, blue_upper], (0,255,0), minArea)
             
-            # Handle target
-            targetPosList = list(set(targetPosList))
-            
-            if len(targetPosList) > 0:
-                 target.where = targetPosList[0]
+            if target.there:
+                if target.where < center_range and target.where > -center_range:
+                    last_seen = "center"
+                elif target.where > center_range:
+                    last_seen = "right"
+                elif target.where < -center_range:
+                    last_seen = "left"
+                last_time = time.clock()
+                
 
             if ALLSTOP:
                  break
@@ -187,7 +205,7 @@ class Servo:
         if shootNow:
             self.update(180)
             print "shot(s) fired"
-            time.sleep(0.12)
+            time.sleep(0.13)
             self.update(43)
             #print "reload"
             time.sleep(1)
@@ -200,8 +218,6 @@ class Servo:
 ################################################################################
 
 ### MAIN FUNCTION
-print("Here we go! Press CTRL+C to exit")
-### CALIBRATION ###
 cameraThread = CameraThread()
 cameraThread.daemon = True
 cameraThread.start()
@@ -210,51 +226,84 @@ shooterThread = ShooterThread()
 shooterThread.daemon = True
 shooterThread.start()
 
-compThread = ComparatorThread()
-compThread.daemon = True
-compThread.start()
+
+GPIO.setup(left_comp, GPIO.IN)
+GPIO.setup(right_comp, GPIO.IN)
+GPIO.add_event_detect(left_comp, GPIO.BOTH, callback=LeftComparatorCb)
+GPIO.add_event_detect(right_comp, GPIO.BOTH, callback=RightComparatorCb)
+#compThread = ComparatorThread()
+#compThread.daemon = True
+#compThread.start()
+
+time.sleep(5-time.clock())
+now = time.clock()
+print "Waited", now
 
 try:
     while 1:
-        robot.setAllSpeeds(30)
+        # stop if about to go off edge
         if leftEdge and rightEdge:
             shootNow = False
             robot.reverse(0.5)
             #robot.turnRight()
-            print "Ack! I'm going to fall"
-        elif leftEdge:
+            print "!!!  I'm going to fall !!!"
+        # turn right if about to fall off left
+        elif leftEdge: 
             shootNow = False
             robot.turnRight()
-            print "Avoiding left edge"
-        elif rightEdge:
+            print "--> Avoiding left edge"
+        # turn left if about to fall off right
+        elif rightEdge: 
             shootNow = False
             robot.turnLeft()
-            print "Avoiding right edge"
-        elif target.there and target.where < center_range and target.where > -center_range:
+            print "<-- Avoiding right edge"
+        # shoot & go forward if target seen
+        elif target.there and last_seen is "center": 
             shootNow = True
             robot.forward()
             print "I see you"
-        elif target.there and target.where < center_range:
-            robot.goRight()
+        # chase target right
+        elif target.there and last_seen is "right": 
+            robot.goRight(int(2*target.where/res_var*turn_ratio))
             shootNow = False
-            print "Pursuing right",target.where
-        elif target.there and target.where > -center_range:
-            robot.goLeft()
+            print "-> Pursuing right",target.where
+        # chase target left
+        elif target.there and last_seen is "left":
+            robot.goLeft(int(2*target.where/res_var*turn_ratio))
             shootNow = False
-            print "Pursuing left",target.where
-        else:
+            print "<- Pursuing left",target.where
+        # last saw target going left
+        elif last_seen is "left":
+            robot.turnLeft()
             shootNow = False
-            nextMove = 2 #randint(0, 5)
+            print "<-- Remember left"
+        # last saw target going right
+        elif last_seen is "right": 
+            robot.turnRight()
+            shootNow = False
+            print "--> Remember right"
+        # no idea, guess??
+        else: 
+            nextMove = randint(0, 8)
             if nextMove < 1:
-                robot.turnLeft()
+                robot.goLeft()
             elif nextMove < 2:
+                robot.goRight()
+            elif nextMove < 4:
+                robot.turnLeft()
+            elif nextMove < 6:
                 robot.turnRight()
             else:
                 #robot.forward()
                 robot.stop()
-            print "Exploring", nextMove
-		
-
+            print "? Exploring", nextMove
+            
+        # Remove old targets
+        if time.clock()-last_time > time_out:
+            last_seen = "unknown"
+            print "Time out:",time.clock()-last_time
+            last_time = time.clock()
+            
 # If CTRL+C is pressed, exit cleanly:
 except KeyboardInterrupt:
     ALLSTOP = True 

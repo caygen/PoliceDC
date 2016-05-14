@@ -57,9 +57,9 @@ try:
     while 1:
         robot.setAllSpeeds(30)
         robot.forward()
-        robot.turnLeft()
-        robot.turnRight()
-        robot.backward()
+        #robot.turnLeft()
+        #robot.turnRight()
+        #robot.backward()
         
 #FR, FL = reverse; RR, RL = normal # cw is faster
 	#robot.rearLeft.ccw()

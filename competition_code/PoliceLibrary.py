@@ -13,28 +13,6 @@ def t_sleep(t):
     for i in range(t/0.1):
         time.sleep(0.1)
 
-####################
-
-def ColorFilter(image, hsv, lower, upper, color, err):
-    """ masks hsv image by hsv color range & draws contours on original image """
-    if image is None or hsv is None:
-        return False, [], [], image
-    height, width = image.shape[:2]
-
-    # Filter by HSV color
-    mask = cv2.inRange(hsv, lower, upper)
-    mask = cv2.dilate(mask, np.ones((11, 11)))
-    maskImg = np.zeros((height,width,3), np.uint8)
-    res = cv2.bitwise_and(image,image,maskImg,mask=mask)
-    
-    ### CALIBRATION ###
-    cv2.imshow("mask"+str(color[0]==255),maskImg)
-    cv2.waitKey(1)
-    
-    found, coords, targets = findContours(image, mask, color, err)
-
-    return found, coords, targets
-
 ########################################
 
 def ColorFilter2(image, hsv, lowerList, upperList, color, minArea=500):
@@ -54,9 +32,9 @@ def ColorFilter2(image, hsv, lowerList, upperList, color, minArea=500):
     maskImg = np.zeros((height,width,3), np.uint8)
     res = cv2.bitwise_and(image,image,maskImg,mask=totalMask)
 
-    found, coords, targets = findContours(image, totalMask, color, minArea)
+    found, coords, target = findContours(image, totalMask, color, minArea)
     
-    return found, coords, targets, image
+    return found, coords, target, image
 
 ########################################
 
@@ -74,7 +52,7 @@ def findContours(image, mask, color, n=3, err=None,minArea=500):
             
     found = False
     coords = []
-    targets = []
+    target = 0
 
     for i in range(len(contours)):
 	area = cv2.contourArea(contours[i])
@@ -82,23 +60,18 @@ def findContours(image, mask, color, n=3, err=None,minArea=500):
             index = i
             maxArea = area
 
-    # Draw first n contours
-    #for i in range(0, min(len(contours),n)):
+    # Draw max contour
     if index > -1:
         cv2.drawContours(image, [contours[index]], 0, color)
         moments = cv2.moments(contours[index])
         coord = (int(moments['m10']/max(moments['m00'], 1)), int(moments['m01']/max(moments['m00'], 1)))
         if (coord[0] is not 0 and coord[1] is not 0):
             cv2.circle(image, coord, 3, color, -1)
-            coords += [coord]
-            exact = int(width/2 - coord[0])
-            if err is None:
-                targets += [exact]
-            else:
-                targets += [x+exact for x in range(-err, err+1)] # exact +/- err
+            coords = [coord]
+            target = int(width/2 - coord[0])
             found = True
 
-    return found, coords, targets
+    return found, coords, target
 
 ########################################
 
@@ -216,7 +189,7 @@ class Robot:
 
     def goLeft(self, t=0.3,s=20):
         print "GOING LEFT"
-        self.action = "right"
+        self.action = "go_left"
         self.forward()
         # slow down right side
         self.frontLeft.set_speed(s)
@@ -228,7 +201,7 @@ class Robot:
         
     def goRight(self, t=0.3,s=20):
         print "GOING RIGHT"
-        self.action = "right"
+        self.action = "go_right"
         self.forward()
         # slow down right side
         self.frontRight.set_speed(s)
