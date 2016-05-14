@@ -28,7 +28,7 @@ turn_ratio = 0.7 # Speed reduction for turning
 last_seen = "unknown" # Last seen direction of target
 last_time = 10 # Last time since target seen
 time_out = 5 # Ignore targets seen longer than time_out seconds ago
-max_time = 160 # just shoot already
+max_time = 170 # just shoot already
 ## Command sequence
 C_F = 0
 C_TL = 1
@@ -36,7 +36,7 @@ C_TR = 2
 C_REV = 3
 C_L = 4
 C_R = 5
-C_WORDS = ["C_F", "C_TL", "C_TR", "C_REV", "C_L", "C_R"]
+C_WORDS = ["C_F", "C_TL", "C_F", "C_TL", "C_F", "C_TL", "C_F", "C_TL", "C_F", "C_TL"]
 C_LIST = [C_F, C_R, C_R, C_F]
 C_IDX = 0
 
@@ -279,9 +279,9 @@ try:
     while 1:
 		
 		# nothing to lose
-		if time.clock() > max_time:
-			shootNow = True
-			robot.turnLeft()
+        if time.clock() > max_time:
+            shootNow = True
+            robot.turnLeft()
         # stop if about to go off edge
         elif leftEdge and rightEdge or isBump:
             shootNow = False
@@ -302,27 +302,27 @@ try:
         elif target.there and last_seen == "center": 
             shootNow = True
             robot.forward()
-            print "I see you"
+            print "** I see you"
         # chase target right
         elif target.there and last_seen =="right": 
             robot.goRight(int(2*target.where/res_var*turn_ratio))
             shootNow = False
-            print "-> Pursuing right",target.where
+            print "* -> Pursuing right",target.where
         # chase target left
         elif target.there and last_seen =="left":
             robot.goLeft(int(2*target.where/res_var*turn_ratio))
             shootNow = False
-            print "<- Pursuing left",target.where
+            print "* <- Pursuing left",target.where
         # last saw target going left
         elif last_seen is "left":
-            robot.turnLeft()
+            robot.goLeft()
             shootNow = False
-            print "<-- Remember left"
+            print "(<-) Remember left"
         # last saw target going right
         elif last_seen is "right": 
-            robot.turnRight()
+            robot.goRight()
             shootNow = False
-            print "--> Remember right"
+            print "(->) Remember right"
         # no idea, guess??
         elif C_IDX < len(C_LIST): 
             nextMove = C_LIST[C_IDX]
@@ -357,8 +357,6 @@ try:
             else:
                 robot.forward()
             print "? Exploring", nextMove
-        
-        
         
         # Remove old targets
         if time.clock()-last_time > time_out:
