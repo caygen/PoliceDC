@@ -1,4 +1,4 @@
-#!/usrbin/python
+#!/usr/bin/python
 
 import RPi.GPIO as GPIO
 import time
@@ -357,8 +357,8 @@ try:
             C_IDX += 1
         
         if time.clock() > max_time:
-            shootNow = True
-            C_LIST = [C_F]
+            shootNow = False
+            C_LIST = [C_TL]
             print "Changing: $ Command sequence", C_IDX, C_WORDS[C_IDX]
         else:
             C_IDX = 0

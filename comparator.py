@@ -24,12 +24,11 @@ GPIO.add_event_detect(right_comp, GPIO.BOTH, callback=RightComparatorCb)
 print "started"
 while 1:
 	
-	print "left",GPIO.input(9)
-	print "right",GPIO.input(11)
-	#if GPIO.input(9) is 0:
-		#print "left"
-	#if GPIO.input(11) is 0:
-		#print "right"
+	
+	if GPIO.input(9) is 0:
+		print "left"
+	if GPIO.input(11) is 0:
+		print "right"
 		
 	#if left is 0:
 		#print "Left off"
@@ -40,5 +39,3 @@ while 1:
 	#else:
 		#print "Right safe"
 	#sleep(1)
-except KeyboardInterrupt:
-    GPIO.cleanup() # cleanup all GPIO

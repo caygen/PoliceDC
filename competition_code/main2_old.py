@@ -1,4 +1,4 @@
-#!/usrbin/python
+#!/usr/bin/python
 
 import RPi.GPIO as GPIO
 import time
@@ -27,8 +27,8 @@ minArea = center_range * center_range # Minimum area to detect
 turn_ratio = 0.7 # Speed reduction for turning
 last_seen = "unknown" # Last seen direction of target
 last_time = 10 # Last time since target seen
-time_out = 2 # Ignore targets seen longer than time_out seconds ago
-max_time = 3 # just shoot already
+time_out = 5 # Ignore targets seen longer than time_out seconds ago
+max_time = 6 # just shoot already
 ## Command sequence
 C_F = 0
 C_TL = 1
@@ -38,7 +38,7 @@ C_L = 4
 C_R = 5
 C_S = 6
 C_WORDS = ["C_F", "C_TL", "C_TR", "C_REV", "C_L", "C_R", "C_S", "C_TL"]
-C_LIST = [C_F] #, "C_F", "C_TL", "C_F", "C_TL", "C_F", "C_TL", "C_F", "C_TL"
+C_LIST = [C_F, C_F, C_F, C_F, C_L] #, "C_F", "C_TL", "C_F", "C_TL", "C_F", "C_TL", "C_F", "C_TL"
 C_IDX = 0
 
 ########################
@@ -228,7 +228,7 @@ class CameraThread (threading.Thread):
                     last_seen = "left"
                 last_time = time.clock()
             
-            print "Target", target.there, last_time, last_seen
+            #print "Target", target.there, last_time, last_seen
 
             if ALLSTOP:
                  break
@@ -289,9 +289,11 @@ try:
     while 1:
 		
 		# nothing to lose
-	shootNow = True
+        if time.clock() > max_time:
+            shootNow = True
+            robot.turnLeft()
         # stop if about to go off edge
-        if leftEdge and rightEdge or isBump:
+        elif leftEdge and rightEdge or isBump:
             shootNow = False
             robot.reverse(0.5)
             #robot.turnRight
@@ -309,32 +311,32 @@ try:
         # shoot & go forward if target seen
         elif target.there and last_seen == "center": 
             shootNow = True
-            robot.stop()
+            robot.forward()
             print "** I see you"
         # chase target right
         elif target.there and last_seen =="right": 
-            robot.turnRight(int(2*target.where/res_var*turn_ratio))
+            robot.goRight(int(2*target.where/res_var*turn_ratio))
             shootNow = True
             print "* -> Pursuing right",target.where
         # chase target left
         elif target.there and last_seen =="left":
-            robot.turnLeft(int(2*target.where/res_var*turn_ratio))
+            robot.goLeft(int(2*target.where/res_var*turn_ratio))
             shootNow = True
             print "* <- Pursuing left",target.where
         # last saw target going left
         elif last_seen is "left":
-            robot.turnLeft(turn_ratio)
+            robot.goLeft(turn_ratio)
             shootNow = False
             print "(<-) Remember left"
         # last saw target going right
         elif last_seen is "right": 
-            robot.turnRight(turn_ratio)
+            robot.goRight(turn_ratio)
             shootNow = False
             print "(->) Remember right"
         # no idea, guess??
         elif C_IDX < len(C_LIST): 
             shootNow = True
-            nextMove = C_L #C_LIST[C_IDX]
+            nextMove = C_LIST[C_IDX]
             #robot.forward()
             if nextMove is C_L:
                 robot.goLeft(turn_ratio)
@@ -355,11 +357,7 @@ try:
             else:
                 robot.stop()
             C_IDX += 1
-        
-        if time.clock() > max_time:
-            shootNow = True
-            C_LIST = [C_F]
-            print "Changing: $ Command sequence", C_IDX, C_WORDS[C_IDX]
+            #print "$ Command sequence", C_IDX, C_WORDS[C_IDX]
         else:
             C_IDX = 0
             #shootNow = True

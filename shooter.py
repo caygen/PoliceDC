@@ -30,4 +30,4 @@ s = Servo(start)
 s.update(start)
 while 1:
     s.shoot()
-    time.sleep(2)
+    time.sleep(1)
