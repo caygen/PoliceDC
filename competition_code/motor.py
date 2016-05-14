@@ -19,17 +19,18 @@ GPIO.setmode(GPIO.BCM) # Broadcom pin-numbering scheme
 
 robot = Robot()
 
+# Corrected from PWM switch
 # A = PWM mode, B = direction, pwmPin = A input
-# frontLeft: A = gray, B = blue, PWM = green
+# frontLeft: A = green, B = blue, PWM = gray
 robot.rearLeft = Motor(A=25, B=24, pwmPin=23, duty=30, range=range)
 
-# frontRight: A = black, B = yellow, PWM = white
+# frontRight: A = white, B = yellow, PWM = black
 robot.rearRight = Motor(A=16, B=21, pwmPin=20, duty=30, range=range)
 
-# rearLeft: A = white, B = gray, PWM = purple
+# rearLeft: A = purple, B = gray, PWM = white
 robot.frontLeft = Motor(A=26, B=19, pwmPin=13, duty=30, range=range)
 
-# rearRight: A = purple, B = blue, PWM = green
+# rearRight: A = green, B = blue, PWM = purple
 robot.frontRight = Motor(A=17, B=27, pwmPin=22, duty=30, range=range)
 
 ## PWM setup
@@ -55,14 +56,16 @@ startTime = time.time()
 print("Here we go! Press CTRL+C to exit")
 try:
     while 1:
-        robot.forward()
+        robot.frontRight.ccw()
+        #robot.frontLeft.ccw()
+        #robot.rearRight.ccw()
+        #robot.rearLeft.ccw()
+        #robot.forward()
         #robot.goLeft()
         #robot.goRight()
         #robot.turnLeft()
         #robot.turnRight()
         #robot.backward()
-        robot.stop()
-        time.wait(3)
         
 #FR, FL = reverse; RR, RL = normal # cw is faster
 	#robot.rearLeft.ccw()

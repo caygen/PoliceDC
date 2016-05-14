@@ -43,6 +43,7 @@ image = None
 hsv = None
 leftEdge = False
 rightEdge = False
+isBump = False
 
 
 ########################
@@ -51,6 +52,12 @@ rightEdge = False
 
 left_comp = 5
 right_comp = 6
+
+########################
+
+## Bumper pin
+
+bump = 4
 
 ########################
 
@@ -106,7 +113,7 @@ class ShooterThread (threading.Thread):
                 
 ########################
 
-## Comparator Process - using callbacks instead of thread
+## Comparator Event - using callbacks instead of thread
 
 class ComparatorThread (threading.Thread):
     def __init__(self):
@@ -132,6 +139,14 @@ def RightComparatorCb(channel):
     rightEdge = not GPIO.input(right_comp)
     print "RIGHT EDGE", rightEdge
 
+########################
+
+## Bumper Event
+
+def BumpCb(channel):
+    isBump = not GPIO.input(bump)
+    print "BUMP", isBump
+    
 ########################
 
 ## Camera Processes
@@ -218,15 +233,18 @@ class Servo:
 ################################################################################
 
 ### MAIN FUNCTION
+
+# Camera
 cameraThread = CameraThread()
 cameraThread.daemon = True
 cameraThread.start()
 
+# Shooter
 shooterThread = ShooterThread()
 shooterThread.daemon = True
 shooterThread.start()
 
-
+# Comparator
 GPIO.setup(left_comp, GPIO.IN)
 GPIO.setup(right_comp, GPIO.IN)
 GPIO.add_event_detect(left_comp, GPIO.BOTH, callback=LeftComparatorCb)
@@ -234,6 +252,10 @@ GPIO.add_event_detect(right_comp, GPIO.BOTH, callback=RightComparatorCb)
 #compThread = ComparatorThread()
 #compThread.daemon = True
 #compThread.start()
+
+# Bumper
+GPIO.setup(bump, GPIO.IN)
+GPIO.add_event_detect(bump, GPIO.FALLING, callback=BumpCb)
 
 time.sleep(5-time.clock())
 now = time.clock()
