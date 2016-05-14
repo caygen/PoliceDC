@@ -28,15 +28,17 @@ turn_ratio = 0.7 # Speed reduction for turning
 last_seen = "unknown" # Last seen direction of target
 last_time = 10 # Last time since target seen
 time_out = 5 # Ignore targets seen longer than time_out seconds ago
-
+max_time = 160 # just shoot already
 ## Command sequence
-C_FORWARD = 0
-C_LTURN = 1
-C_RTURN = 2
-C_REVERSE = 3
-C_LEFT = 4
-C_RIGHT = 5
-C_LIST = []
+C_F = 0
+C_TL = 1
+C_TR = 2
+C_REV = 3
+C_L = 4
+C_R = 5
+C_WORDS = ["C_F", "C_TL", "C_TR", "C_REV", "C_L", "C_R"]
+C_LIST = [C_F, C_R, C_R, C_F]
+C_IDX = 0
 
 ########################
 ## Globals Variables
@@ -275,9 +277,13 @@ print "Waited", now
 
 try:
     while 1:
-        print "Target", target.there, last_time, last_seen
+		
+		# nothing to lose
+		if time.clock() > max_time:
+			shootNow = True
+			robot.turnLeft()
         # stop if about to go off edge
-        if leftEdge and rightEdge or isBump:
+        elif leftEdge and rightEdge or isBump:
             shootNow = False
             robot.reverse(0.5)
             #robot.turnRight
@@ -318,21 +324,42 @@ try:
             shootNow = False
             print "--> Remember right"
         # no idea, guess??
-        else: 
-            nextMove = 6 #randint(0, 8)
-            if nextMove < 1:
+        elif C_IDX < len(C_LIST): 
+            nextMove = C_LIST[C_IDX]
+            if nextMove is C_L:
                 robot.goLeft()
-            elif nextMove < 2:
+            elif nextMove is C_R:
                 robot.goRight()
-            elif nextMove < 4:
+            elif nextMove is C_TL:
                 robot.turnLeft()
-            elif nextMove < 6:
+            elif nextMove is C_TR:
                 robot.turnRight()
+            elif nextMove is C_F:
+                robot.forward()
+            elif nextMove is C_R:
+                robot.reverse()
+            else:
+                robot.stop()
+            C_IDX += 1
+            print "$ Command sequence", C_IDX, C_WORDS[C_IDX]
+        else:
+            nextMove = randint(0, 10)
+            if nextMove < 1:
+                robot.turnLeft()
+            elif nextMove < 2:
+                robot.turnRight()
+            elif nextMove < 4:
+                robot.goLeft()
+            elif nextMove < 6:
+                robot.goRight()
+            elif nextMove < 7:
+				robot.stop()
             else:
                 robot.forward()
-                #robot.stop()
             print "? Exploring", nextMove
-            
+        
+        
+        
         # Remove old targets
         if time.clock()-last_time > time_out:
             last_seen = "unknown"
