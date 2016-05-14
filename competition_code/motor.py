@@ -21,16 +21,16 @@ robot = Robot()
 
 # A = PWM mode, B = direction, pwmPin = A input
 # frontLeft: A = gray, B = blue, PWM = green
-robot.rearLeft = Motor(A=25, B=24, pwmPin=23, duty=10, range=range)
+robot.rearLeft = Motor(A=25, B=24, pwmPin=23, duty=30, range=range)
 
 # frontRight: A = black, B = yellow, PWM = white
-robot.rearRight = Motor(A=16, B=21, pwmPin=20, duty=10, range=range)
+robot.rearRight = Motor(A=16, B=21, pwmPin=20, duty=30, range=range)
 
 # rearLeft: A = white, B = gray, PWM = purple
-robot.frontLeft = Motor(A=26, B=19, pwmPin=13, duty=10, range=range)
+robot.frontLeft = Motor(A=26, B=19, pwmPin=13, duty=30, range=range)
 
 # rearRight: A = purple, B = blue, PWM = green
-robot.frontRight = Motor(A=17, B=27, pwmPin=22, duty=10, range=range)
+robot.frontRight = Motor(A=17, B=27, pwmPin=22, duty=30, range=range)
 
 ## PWM setup
 
@@ -55,11 +55,14 @@ startTime = time.time()
 print("Here we go! Press CTRL+C to exit")
 try:
     while 1:
-        robot.setAllSpeeds(30)
         robot.forward()
+        #robot.goLeft()
+        #robot.goRight()
         #robot.turnLeft()
         #robot.turnRight()
         #robot.backward()
+        robot.stop()
+        time.wait(3)
         
 #FR, FL = reverse; RR, RL = normal # cw is faster
 	#robot.rearLeft.ccw()

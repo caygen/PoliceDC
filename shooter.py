@@ -3,7 +3,7 @@
 import RPi.GPIO as GPIO
 import time
 
-start = 43
+start = 45
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(18, GPIO.OUT)
 pwm = GPIO.PWM(18, 50)
@@ -17,7 +17,7 @@ class Servo:
     def shoot(self):
         self.update(180)
 	print "shot(s) fired"
-        time.sleep(0.12)
+        time.sleep(0.13)
         self.update(start)
         print "reload"
         time.sleep(0.1)
@@ -30,4 +30,4 @@ s = Servo(start)
 s.update(start)
 while 1:
     s.shoot()
-    time.sleep(1)
+    time.sleep(2)

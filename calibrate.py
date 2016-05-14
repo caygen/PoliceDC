@@ -12,11 +12,16 @@ import threading
 # RED (0, 106, 210), (81, 178, 255)
 # BLUE (97, 50, 160), (120, 255, 255) - Wed
 # exposure 6660
+# Blue obstacle values: (107, 107-133, 140-210)
+# Target values: (
 
 red_lower = np.array([0, 106, 210])
 red_upper = np.array([81, 178, 255])
 blue_lower = np.array([97, 50, 160])
 blue_upper = np.array([120, 255, 255])
+res_var = 300 # image width
+center_range = res_var/10
+min_area = 500
 
 ########################################
 
@@ -139,6 +144,7 @@ def findContours(image, mask, color, n=3, err=None):
     """ find n contours in mask and draw on image """
     
     height, width = image.shape[:2]
+    print "height", height, "width", width
 
     # Find contours
     _, contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)
@@ -153,10 +159,10 @@ def findContours(image, mask, color, n=3, err=None):
 
     for i in range(len(contours)):
 	area = cv2.contourArea(contours[i])
-        if area > maxArea:
+        if area > maxArea and area > min_area:
             index = i
             maxArea = area
-
+    print maxArea
     # Draw first n contours
     #for i in range(0, min(len(contours),n)):
     if index > -1:
@@ -192,9 +198,9 @@ class CameraThread (threading.Thread):
     	
         # Camera Settings
         self.camera = PiCamera()
-        self.camera.resolution = (640, 480)
+        self.camera.resolution = (600, 480)
         self.camera.framerate = 32
-        self.rawCapture = PiRGBArray(self.camera, size=(640, 480))
+        self.rawCapture = PiRGBArray(self.camera, size=(600, 480))
         self.camera.vflip = True
         self.camera.hflip = True
         self.camera.video_stabilization = True
@@ -239,8 +245,9 @@ class CameraThread (threading.Thread):
         for frame in self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True):
             # Grab frame
     	    big = frame.array
-    	    image = cv2.resize(big, (250, int(big.shape[0]*250/big.shape[1])), interpolation = cv2.INTER_AREA)
-            image = image[30:127, :] #img[y:y+h, x:x+w]
+    	    image = cv2.resize(big, (res_var, int(big.shape[0]*res_var/big.shape[1])), interpolation = cv2.INTER_AREA)
+    	    res_var_b = int(res_var/200)
+            image = image[res_var_b*30:res_var_b*127, :] #img[y:y+h, x:x+w]
             # Cleanup
             self.rawCapture.truncate(0)
             
@@ -255,7 +262,11 @@ class CameraThread (threading.Thread):
             target.there, coords, targetPosList, image = ColorFilter2(image, hsv, [red_lower, blue_lower], [red_upper, blue_upper], (0,255,0))
             
             targetPosList = list(set(targetPosList))
-            #print "Target",target.there,"at",targetPosList
+            
+            #if target.there and target.where < center_range and target.where > -center_range:
+                #print "I see you at", targetPosList
+            #else:
+                #print "Target",target.there,"at",targetPosList, "(Outside",center_range,")"
             
             if len(targetPosList) > 0:
                  target.where = targetPosList[0]
